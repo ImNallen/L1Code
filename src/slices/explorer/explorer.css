@@ -1,0 +1,62 @@
+.explorer-tree {
+  flex: 1;
+  min-height: 0;
+  color-scheme: dark;
+  --trees-theme-sidebar-bg: var(--bg-panel);
+  --trees-theme-sidebar-fg: #c3c9d4;
+  --trees-theme-sidebar-header-fg: var(--fg-subtle);
+  --trees-theme-sidebar-border: var(--border);
+  --trees-theme-list-hover-bg: var(--bg-hover);
+  --trees-theme-list-active-selection-bg: var(--bg-selected);
+  --trees-theme-list-active-selection-fg: var(--fg);
+  --trees-theme-input-bg: var(--bg-input);
+  --trees-theme-input-fg: var(--fg);
+  --trees-theme-focus-ring: var(--accent);
+  --trees-theme-scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --trees-theme-git-added-fg: var(--added);
+  --trees-theme-git-untracked-fg: var(--untracked);
+  --trees-theme-git-modified-fg: var(--modified);
+  --trees-theme-git-renamed-fg: var(--modified);
+  --trees-theme-git-deleted-fg: var(--deleted);
+  --trees-theme-git-ignored-fg: var(--fg-subtle);
+  --trees-accent-override: var(--accent);
+  --trees-font-size-override: 12.5px;
+  --trees-font-family-override: var(--font-ui);
+}
+.explorer-root {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-open-backdrop {
+  align-items: flex-start;
+  padding-top: 12vh;
+  background: rgba(0, 0, 0, 0.25);
+}
+.quick-open {
+  width: min(640px, 90vw);
+  padding: 8px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.quick-open-input {
+  height: 34px;
+  font-size: 14px;
+}
+.quick-open-list {
+  max-height: 50vh;
+  margin-top: 6px;
+  overflow: auto;
+}
+.quick-open-list .row {
+  height: 28px;
+  border-radius: var(--radius-sm);
+  padding: 0 8px;
+}
+.quick-open-list b {
+  color: var(--accent);
+  font-weight: 600;
+}
