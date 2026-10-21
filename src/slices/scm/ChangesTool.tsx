@@ -14,7 +14,11 @@ interface Item {
   readonly path: string;
   readonly patch: string;
   readonly stats: PatchStats;
+  /** In git status but without a patch: `git_diff` skips large or numerous untracked files. */
+  readonly omitted?: boolean;
 }
+
+const NO_PATCH: PatchStats = { additions: 0, deletions: 0, lines: 0, deleted: false, binary: false };
 
 interface DiffSet {
   readonly gen: number;
@@ -50,7 +54,7 @@ function toDiffSet(gen: number, patches: readonly { path: string; patch: string 
 }
 
 export default function ChangesTool() {
-  const { status, gen } = useScmState();
+  const { status, gen, error: statusError } = useScmState();
   const isRepo = status !== null;
   const gitFiles = useMemo(() => new Map((status?.files ?? []).map((f) => [f.path, f])), [status]);
   const groups = useMemo(() => groupFiles(status?.files ?? []), [status]);
@@ -60,6 +64,15 @@ export default function ChangesTool() {
   const [limit, setLimit] = useState(PAGE);
   const style = useStore(diffStyle);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Every changed file gets a row, so files without a patch can still be staged or discarded.
+  const items = useMemo<readonly Item[]>(() => {
+    if (!data) return [];
+    if (!status || data.gen !== gen) return data.items;
+    const listed = new Set(data.items.map((i) => i.path));
+    const rest = status.files.filter((f) => !listed.has(f.path)).map((f) => ({ path: f.path, patch: "", stats: NO_PATCH, omitted: true }));
+    return rest.length ? [...data.items, ...rest] : data.items;
+  }, [data, status, gen]);
   const blocks = useRef(new Map<string, HTMLElement>());
   const latest = useRef(0);
 
@@ -90,7 +103,7 @@ export default function ChangesTool() {
   const doneSeq = useRef(0);
   useEffect(() => {
     if (!focus.path || focus.seq === doneSeq.current || !data) return;
-    const index = data.items.findIndex((i) => i.path === focus.path);
+    const index = items.findIndex((i) => i.path === focus.path);
     if (index < 0) {
       if (!loading) doneSeq.current = focus.seq;
       return;
@@ -101,7 +114,7 @@ export default function ChangesTool() {
     }
     doneSeq.current = focus.seq;
     blocks.current.get(focus.path)?.scrollIntoView({ block: "start" });
-  }, [focus, data, loading, limit]);
+  }, [focus, data, items, loading, limit]);
 
   const options = useMemo<FileDiffOptions<undefined, undefined>>(
     () => ({ theme: "pierre-dark", themeType: "dark", diffStyle: style, overflow: "scroll", disableFileHeader: true, unsafeCSS: DIFF_CSS }),
@@ -131,7 +144,7 @@ export default function ChangesTool() {
           )}
         </>
       )}
-      {data && data.items.length > 0 && (
+      {data && items.length > 0 && (
         <>
           <StageBox
             state={allStaged ? "all" : groups.staged.length > 0 ? "some" : "none"}
@@ -139,7 +152,7 @@ export default function ChangesTool() {
             onClick={() => void (allStaged ? unstage(groups.staged.map((f) => f.path)) : stage(groups.changes.map((f) => f.path)))}
           />
           <span className="chg-count">
-            {data.items.length} {data.items.length === 1 ? "file" : "files"}
+            {items.length} {items.length === 1 ? "file" : "files"}
           </span>
           <span className="chg-add mono">+{data.additions}</span>
           <span className="chg-del mono">−{data.deletions}</span>
@@ -161,11 +174,11 @@ export default function ChangesTool() {
 
   let body: ReactNode;
   if (gen === 0 && !data) body = <div className="empty">Loading…</div>;
-  else if (!isRepo) body = <div className="empty">This folder is not a git repository.</div>;
+  else if (!isRepo) body = <div className="empty selectable">{statusError ? `Couldn't read git status: ${statusError}` : "This folder is not a git repository."}</div>;
   else if (!data) body = <div className="empty">{error ?? "Loading…"}</div>;
-  else if (data.items.length === 0) body = <div className="empty">No changes</div>;
+  else if (items.length === 0) body = <div className="empty">No changes</div>;
   else {
-    const shown = data.items.slice(0, limit);
+    const shown = items.slice(0, limit);
     body = (
       <>
         {shown.map((item) => (
@@ -179,10 +192,10 @@ export default function ChangesTool() {
             register={(el) => (el ? blocks.current.set(item.path, el) : blocks.current.delete(item.path))}
           />
         ))}
-        {data.items.length > limit && (
+        {items.length > limit && (
           <div className="chg-more">
             <button className="btn" onClick={() => setLimit((l) => l + PAGE)}>
-              Show {Math.min(PAGE, data.items.length - limit)} more of {data.items.length - limit}
+              Show {Math.min(PAGE, items.length - limit)} more of {items.length - limit}
             </button>
           </div>
         )}
@@ -194,6 +207,7 @@ export default function ChangesTool() {
     <div className="panel chg">
       {toolbar}
       {status && status.files.length > 0 && <CommitBox stagedCount={groups.staged.length} totalCount={status.files.length} />}
+      {statusError && isRepo && <div className="chg-error selectable">Couldn't refresh git status: {statusError}</div>}
       {error && data && <div className="chg-error selectable">{error}</div>}
       <div className="panel-body chg-scroll native-scroll" ref={scrollRef}>
         {body}
@@ -241,7 +255,8 @@ function FileBlock({
   }, [visible, root]);
 
   let content: ReactNode;
-  if (stats.binary) content = <div className="chg-note">Binary file changed.</div>;
+  if (item.omitted) content = <div className="chg-note">No diff shown. The file is over 1 MiB, or there are over 200 untracked files.</div>;
+  else if (stats.binary) content = <div className="chg-note">Binary file changed.</div>;
   else if (stats.lines === 0) content = <div className="chg-note">No textual changes.</div>;
   else if (stats.lines > LARGE_LINES && !forced)
     content = (

@@ -44,7 +44,10 @@ async function run(): Promise<void> {
     const status = await rust.gitStatus();
     store.update((s) => ({ status, gen: s.gen + 1, refreshing: s.refreshing, error: null }));
   } catch (e) {
-    store.update((s) => ({ ...s, gen: s.gen + 1, error: errorMessage(e) }));
+    const error = errorMessage(e);
+    // Toast a new failure once; refreshes on focus would repeat it.
+    if (store.get().error !== error) toast(`Couldn't read git status: ${error}`, "error");
+    store.update((s) => ({ ...s, gen: s.gen + 1, error }));
   } finally {
     running = false;
     if (again) {

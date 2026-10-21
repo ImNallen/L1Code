@@ -16,7 +16,8 @@ export const changesTool = defineRightTool({
   shortcut: "Mod+Shift+D",
   component: lazy(() => import("./ChangesTool")),
   useBadge: s.useChangedCount,
-  available: derive(s.scmState, (st) => (st.status?.files.length ?? 0) > 0),
+  // Also shown when git status fails, since this tool is where that error and Refresh live.
+  available: derive(s.scmState, (st) => (st.status?.files.length ?? 0) > 0 || st.error !== null),
 });
 
 export const scm = {
