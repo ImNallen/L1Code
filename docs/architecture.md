@@ -139,6 +139,8 @@ The cross-judge picked candidate 3 as the base and scored it 26 against 23 and 2
 - We accept that Changes shows HEAD versus disk, not the draft, in exchange for exactly one buffer owner.
 - We accept raw replay of the terminal ring, which can garble full-screen apps after a reload, in exchange for not shipping a vt100 model.
 
+- We accept that background git runs without the repository's fsmonitor, filter drivers, and textconv, in exchange for opening an untrusted folder never running a program its `.git/config` names. Files tracked by Git LFS can therefore show as modified, or diff against their pointer, in Changes. Stage and commit still use normal git.
+
 ## Alternatives considered
 
 - **Rust-owned documents (candidate 1).** Its interface is deepest: lossless reload and search over drafts. It needs a collab protocol and per-keystroke IPC, which is too much machinery for v1.

@@ -1,5 +1,12 @@
 //! Git through the CLI, parsed into domain types here. `GIT_OPTIONAL_LOCKS=0` keeps `status` from
 //! rewriting `.git/index`, which would otherwise wake the watcher and retrigger a refresh forever.
+//!
+//! Two builders, so every call site chooses:
+//! - `git_auto` for commands L1Code runs on its own (status, diff). A repository's own config can
+//!   name programs git runs during these (`core.fsmonitor`, filter drivers, textconv), so merely
+//!   opening an untrusted folder would execute them. `git_auto` switches all of those off.
+//! - `git_user` for actions the user asked for (stage, commit), which keep normal git behavior
+//!   such as hooks and Git LFS filters.
 
 use std::path::Path;
 use std::process::Command;
@@ -55,10 +62,38 @@ pub(crate) struct FilePatch {
     pub(crate) patch: String,
 }
 
-pub(crate) fn git(root: &Path) -> Command {
+fn git_user(root: &Path) -> Command {
     let mut c = Command::new("git");
-    c.arg("-C").arg(root).env("GIT_OPTIONAL_LOCKS", "0").env("GIT_TERMINAL_PROMPT", "0");
+    c.arg("-C").arg(root).env("GIT_OPTIONAL_LOCKS", "0").env("GIT_TERMINAL_PROMPT", "0").stdin(std::process::Stdio::null());
     c
+}
+
+/// Git that runs no program named by repository config. Diff commands must also pass
+/// `--no-ext-diff --no-textconv`.
+fn git_auto(root: &Path) -> Command {
+    let mut c = git_user(root);
+    c.args(["-c", "core.fsmonitor=false"]);
+    for name in filter_drivers(root) {
+        for key in ["clean", "smudge", "process"] {
+            c.arg("-c").arg(format!("filter.{name}.{key}="));
+        }
+        c.arg("-c").arg(format!("filter.{name}.required=false"));
+    }
+    c
+}
+
+/// Names of configured filter drivers. Reading config runs nothing.
+fn filter_drivers(root: &Path) -> Vec<String> {
+    let mut c = git_user(root);
+    c.args(["config", "--name-only", "--get-regexp", r"^filter\."]);
+    let Ok(out) = c.output() else { return vec![] };
+    let mut names: Vec<String> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|l| l.strip_prefix("filter.")?.rsplit_once('.').map(|(name, _)| name.to_string()))
+        .collect();
+    names.sort();
+    names.dedup();
+    names
 }
 
 fn run(mut cmd: Command) -> Result<String> {
@@ -70,13 +105,13 @@ fn run(mut cmd: Command) -> Result<String> {
 }
 
 pub(crate) fn is_inside_work_tree(root: &Path) -> bool {
-    let mut c = git(root);
+    let mut c = git_auto(root);
     c.args(["rev-parse", "--is-inside-work-tree"]);
     run(c).is_ok_and(|s| s.trim() == "true")
 }
 
 fn has_head(root: &Path) -> bool {
-    let mut c = git(root);
+    let mut c = git_auto(root);
     c.args(["rev-parse", "--verify", "--quiet", "HEAD"]);
     c.output().is_ok_and(|o| o.status.success())
 }
@@ -86,15 +121,16 @@ fn has_head(root: &Path) -> bool {
 pub(crate) async fn git_status(state: State<'_, AppState>) -> Result<Option<GitStatus>> {
     let ws = state.workspace()?;
     let root = ws.root.clone();
-    blocking(move || {
-        if !is_inside_work_tree(&root) {
-            return Ok(None);
-        }
-        let mut c = git(&root);
-        c.args(["status", "--porcelain=v2", "--branch", "-z", "--untracked-files=all"]);
-        Ok(Some(parse_status(&run(c)?)))
-    })
-    .await
+    blocking(move || status_at(&root)).await
+}
+
+fn status_at(root: &Path) -> Result<Option<GitStatus>> {
+    if !is_inside_work_tree(root) {
+        return Ok(None);
+    }
+    let mut c = git_auto(root);
+    c.args(["status", "--porcelain=v2", "--branch", "-z", "--untracked-files=all"]);
+    Ok(Some(parse_status(&run(c)?)))
 }
 
 pub(crate) fn parse_status(out: &str) -> GitStatus {
@@ -165,30 +201,31 @@ fn file(path: String, orig_path: Option<String>, xy: &str) -> GitFile {
 pub(crate) async fn git_diff(state: State<'_, AppState>) -> Result<Vec<FilePatch>> {
     let ws = state.workspace()?;
     let root = ws.root.clone();
-    blocking(move || {
-        let base = if has_head(&root) { "HEAD" } else { EMPTY_TREE };
-        let mut c = git(&root);
-        c.args(["diff", "--no-color", "--no-ext-diff", "-M", base, "--"]);
-        let mut patches = split_patches(&run(c)?);
+    blocking(move || diff_at(&root)).await
+}
 
-        let mut c = git(&root);
-        c.args(["ls-files", "--others", "--exclude-standard", "-z"]);
-        let untracked = run(c)?;
-        for path in untracked.split('\0').filter(|p| !p.is_empty()).take(MAX_UNTRACKED_DIFFS) {
-            let size = std::fs::metadata(root.join(path)).map(|m| m.len()).unwrap_or(0);
-            if size > MAX_UNTRACKED_BYTES {
-                continue;
-            }
-            let mut c = git(&root);
-            c.args(["diff", "--no-color", "--no-ext-diff", "--no-index", "--", "/dev/null", path]);
-            // --no-index exits 1 when files differ, which is always here.
-            let out = c.output().map_err(|e| Error::Unavailable(e.to_string()))?;
-            let text = String::from_utf8_lossy(&out.stdout);
-            patches.extend(split_patches(&text));
+fn diff_at(root: &Path) -> Result<Vec<FilePatch>> {
+    let base = if has_head(root) { "HEAD" } else { EMPTY_TREE };
+    let mut c = git_auto(root);
+    c.args(["diff", "--no-color", "--no-ext-diff", "--no-textconv", "-M", base, "--"]);
+    let mut patches = split_patches(&run(c)?);
+
+    let mut c = git_auto(root);
+    c.args(["ls-files", "--others", "--exclude-standard", "-z"]);
+    let untracked = run(c)?;
+    for path in untracked.split('\0').filter(|p| !p.is_empty()).take(MAX_UNTRACKED_DIFFS) {
+        let size = std::fs::metadata(root.join(path)).map(|m| m.len()).unwrap_or(0);
+        if size > MAX_UNTRACKED_BYTES {
+            continue;
         }
-        Ok(patches)
-    })
-    .await
+        let mut c = git_auto(root);
+        c.args(["diff", "--no-color", "--no-ext-diff", "--no-textconv", "--no-index", "--", "/dev/null", path]);
+        // --no-index exits 1 when files differ, which is always here.
+        let out = c.output().map_err(|e| Error::Unavailable(e.to_string()))?;
+        let text = String::from_utf8_lossy(&out.stdout);
+        patches.extend(split_patches(&text));
+    }
+    Ok(patches)
 }
 
 pub(crate) fn split_patches(out: &str) -> Vec<FilePatch> {
@@ -223,7 +260,7 @@ pub(crate) async fn git_stage(state: State<'_, AppState>, paths: Vec<RelPath>) -
     let ws = state.workspace()?;
     let root = ws.root.clone();
     blocking(move || {
-        let mut c = git(&root);
+        let mut c = git_user(&root);
         c.args(["add", "-A", "--"]).args(paths.iter().map(RelPath::as_str));
         run(c).map(drop)
     })
@@ -236,7 +273,7 @@ pub(crate) async fn git_unstage(state: State<'_, AppState>, paths: Vec<RelPath>)
     let ws = state.workspace()?;
     let root = ws.root.clone();
     blocking(move || {
-        let mut c = git(&root);
+        let mut c = git_user(&root);
         if has_head(&root) {
             c.args(["restore", "--staged", "--"]);
         } else {
@@ -256,7 +293,7 @@ pub(crate) async fn git_discard(state: State<'_, AppState>, paths: Vec<RelPath>,
     let root = ws.root.clone();
     blocking(move || {
         if !paths.is_empty() {
-            let mut c = git(&root);
+            let mut c = git_user(&root);
             c.args(["restore", "--worktree", "--"]).args(paths.iter().map(RelPath::as_str));
             run(c)?;
         }
@@ -279,11 +316,11 @@ pub(crate) async fn git_commit(state: State<'_, AppState>, message: String, stag
             return Err(Error::Git("commit message is empty".into()));
         }
         if stage_all {
-            let mut c = git(&root);
+            let mut c = git_user(&root);
             c.args(["add", "-A"]);
             run(c)?;
         }
-        let mut c = git(&root);
+        let mut c = git_user(&root);
         c.args(["commit", "-q", "-m", &message]);
         run(c).map(drop)
     })
@@ -313,6 +350,37 @@ mod tests {
         assert_eq!(st.files[1].orig_path.as_deref(), Some("old.rs"));
         assert_eq!(st.files[1].staged, Some(ChangeKind::Renamed));
         assert_eq!(st.files[2].unstaged, Some(ChangeKind::Untracked));
+    }
+
+    /// A repository whose config names programs for fsmonitor, a clean filter, and textconv.
+    /// Background status and diff must start none of them.
+    #[test]
+    fn automatic_commands_run_no_repo_configured_programs() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().canonicalize().unwrap();
+        let marks = tempfile::tempdir().unwrap();
+        let sh = |args: &[&str]| assert!(git_user(&root).args(args).status().unwrap().success(), "{args:?}");
+        sh(&["init", "-q"]);
+        std::fs::write(root.join("a.txt"), "a\n").unwrap();
+        sh(&["add", "."]);
+        sh(&["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init"]);
+        let script = marks.path().join("evil.sh");
+        std::fs::write(&script, format!("#!/bin/sh\ntouch {}/ran-$1\ncat\n", marks.path().display())).unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let cmd = |what: &str| format!("{} {what}", script.display());
+        sh(&["config", "core.fsmonitor", &cmd("fsmonitor")]);
+        sh(&["config", "filter.x.clean", &cmd("clean")]);
+        sh(&["config", "diff.y.textconv", &cmd("textconv")]);
+        std::fs::write(root.join(".git/info/attributes"), "* filter=x diff=y\n").unwrap();
+        std::fs::write(root.join("a.txt"), "a\nb\n").unwrap();
+
+        let st = status_at(&root).unwrap().unwrap();
+        assert_eq!(st.files.len(), 1);
+        let diff = diff_at(&root).unwrap();
+        assert!(diff[0].patch.contains("+b"));
+        let ran: Vec<_> = std::fs::read_dir(marks.path()).unwrap().filter_map(|e| e.ok()).map(|e| e.file_name()).filter(|n| n != "evil.sh").collect();
+        assert!(ran.is_empty(), "repo-configured programs ran: {ran:?}");
     }
 
     #[test]
