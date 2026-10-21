@@ -1,0 +1,120 @@
+.chg-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 6px 0 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+.chg-toolbar .spacer,
+.chg-file-head .spacer {
+  flex: 1;
+}
+.chg-count {
+  color: var(--fg-muted);
+}
+.chg-add {
+  color: var(--added);
+  font-size: var(--text-xs);
+}
+.chg-del {
+  color: var(--deleted);
+  font-size: var(--text-xs);
+}
+
+@keyframes chg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.chg-spin {
+  animation: chg-spin 0.8s linear infinite;
+}
+
+.chg-error {
+  margin: 8px 10px 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(242, 119, 122, 0.1);
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.chg-scroll {
+  padding-bottom: 24px;
+}
+
+.chg-file {
+  border-bottom: 1px solid var(--border);
+}
+.chg-file-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 4px 0 12px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.chg-file.focused .chg-file-head {
+  box-shadow: inset 2px 0 0 var(--accent);
+  background: var(--bg-active);
+}
+.chg-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  max-width: 60%;
+}
+.chg-dir {
+  color: var(--fg-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.chg-deleted {
+  text-decoration: line-through;
+  color: var(--fg-muted);
+}
+.chg-file-head .icon-btn {
+  width: 22px;
+  height: 22px;
+}
+.chg-file-head .icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.chg-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  color: var(--fg-subtle);
+  font-size: var(--text-sm);
+}
+.chg-placeholder {
+  background: var(--bg);
+}
+.chg-raw {
+  margin: 0;
+  padding: 8px 12px;
+  overflow: auto;
+  max-height: 600px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+.chg-more {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}

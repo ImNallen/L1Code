@@ -1,0 +1,71 @@
+.preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  padding: 0 6px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.preview-bar .preview-url {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  margin: 0 4px;
+  font-size: var(--text-sm);
+}
+.preview-bar .icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
+}
+
+.preview-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  background: var(--bg);
+}
+.preview-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+.preview-frame.sized {
+  flex-shrink: 0;
+  border-left: 1px solid var(--border-strong);
+  border-right: 1px solid var(--border-strong);
+}
+
+.preview-note {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-top: 1px solid var(--border);
+  color: var(--fg-subtle);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.preview-note .inline-icon {
+  width: 11px;
+  height: 11px;
+  vertical-align: -1px;
+}
+
+.preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 48px;
+}
+.preview-ports {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}

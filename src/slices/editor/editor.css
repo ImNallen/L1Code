@@ -1,0 +1,199 @@
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  background: var(--bg);
+}
+
+.editor-host {
+  flex: 1;
+  min-height: 0;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.tabbar {
+  display: flex;
+  height: 34px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+.tabbar::-webkit-scrollbar {
+  height: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 0 6px 0 12px;
+  border-right: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+}
+.tab:hover {
+  color: var(--fg);
+}
+.tab.active {
+  background: var(--bg);
+  color: var(--fg);
+}
+.tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--bg);
+}
+.tab.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab.deleted .tab-name {
+  text-decoration: line-through;
+  color: var(--danger);
+}
+.tab.conflict .tab-name {
+  color: var(--warning);
+}
+.tab-dir {
+  color: var(--fg-subtle);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-close {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-subtle);
+  cursor: pointer;
+}
+.tab-close > * {
+  grid-area: 1 / 1;
+}
+.tab-close svg {
+  visibility: hidden;
+}
+.tab:hover .tab-close svg,
+.tab.active .tab-close svg {
+  visibility: visible;
+}
+.tab-close .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fg-muted);
+  visibility: hidden;
+}
+.tab-close.dirty .dot {
+  visibility: visible;
+}
+.tab-close.dirty svg {
+  visibility: hidden;
+}
+.tab-close.dirty:hover .dot {
+  visibility: hidden;
+}
+.tab-close.dirty:hover svg {
+  visibility: visible;
+}
+.tab-close:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+
+.conflict-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 14px;
+  flex-shrink: 0;
+  background: rgba(229, 192, 123, 0.1);
+  border-bottom: 1px solid rgba(229, 192, 123, 0.3);
+  color: var(--warning);
+  font-size: var(--text-sm);
+}
+.conflict-banner .spacer {
+  flex: 1;
+}
+
+.editor-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  color: var(--fg-subtle);
+}
+.editor-empty-mark {
+  font-family: var(--font-mono);
+  font-size: 64px;
+  font-weight: 700;
+  color: #20252e;
+  letter-spacing: -0.04em;
+}
+.editor-empty dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 8px 24px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.editor-empty dt {
+  text-align: right;
+}
+.editor-empty dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--fg-muted);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+.modal {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.modal.compare {
+  width: min(1200px, 92vw);
+  height: 82vh;
+}

@@ -1,0 +1,109 @@
+.search-box {
+  flex-shrink: 0;
+  padding: 8px 8px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-field .search-input {
+  padding-right: 76px;
+}
+.search-toggles {
+  position: absolute;
+  right: 3px;
+  display: flex;
+  gap: 1px;
+}
+.search-toggles .icon-btn {
+  width: 22px;
+  height: 22px;
+}
+
+.search-summary {
+  margin-top: 6px;
+  padding: 0 2px;
+  color: var(--fg-subtle);
+  font-size: var(--text-xs);
+}
+.search-summary.error {
+  color: var(--danger);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.search-truncated {
+  color: var(--warning);
+}
+
+.search-results {
+  padding: 4px 0 8px;
+}
+
+.search-file {
+  padding-left: 6px;
+  gap: 4px;
+}
+.search-file .name {
+  flex-shrink: 0;
+  max-width: 70%;
+}
+.search-file .dim {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+}
+.search-file .search-count {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.search-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--fg-subtle);
+}
+
+.search-hit {
+  height: 22px;
+  padding-left: 28px;
+  gap: 8px;
+}
+.search-line {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.search-line mark {
+  background: var(--accent-bg);
+  color: var(--fg);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(122, 162, 255, 0.35);
+}
+.search-lineno {
+  flex-shrink: 0;
+  color: var(--fg-subtle);
+  font-size: var(--text-xs);
+}
+
+.search-more {
+  display: block;
+  width: 100%;
+  height: var(--row-h);
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.search-more:hover {
+  background: var(--bg-hover);
+}
