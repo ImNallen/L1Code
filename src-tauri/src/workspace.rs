@@ -2,7 +2,6 @@
 //! the webview can only name files through `RelPath`. Documents are not here; the editor owns them.
 
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
@@ -18,8 +17,6 @@ pub(crate) struct Workspace {
     pub(crate) root: PathBuf,
     /// Serializes compare-and-swap writes so the hash check and the rename are one step.
     pub(crate) write_lock: Mutex<()>,
-    /// Bumped by every new search; a running search stops when it no longer matches.
-    pub(crate) search_ticket: AtomicU64,
     pub(crate) terminals: Terminals,
     watcher: Mutex<Option<Watcher>>,
 }
@@ -74,7 +71,6 @@ pub(crate) fn workspace_open(state: State<'_, AppState>, path: String, on_fs: Ch
             let ws = Arc::new(Workspace {
                 root: root.clone(),
                 write_lock: Mutex::new(()),
-                search_ticket: AtomicU64::new(0),
                 terminals: Terminals::default(),
                 watcher: Mutex::new(None),
             });

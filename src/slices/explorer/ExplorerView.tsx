@@ -1,16 +1,34 @@
 import { FileTree, type FileTreeProps } from "@pierre/trees/react";
-import { FilePlus, FolderPlus, RefreshCw } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { FilePlus, FolderPlus, Search, X } from "lucide-react";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { onReveal } from "@/core/reveal";
 import { useStore } from "@/core/store";
 import { workspaceState } from "@/core/workspace";
 import { terminal } from "@/slices/terminal";
-import { explorerState, load, remove, startCreate, startRename, treeModel } from "./tree";
+import { editor } from "@/slices/editor";
+import { explorerFilter, explorerState, firstMatch, load, remove, setFilter, startCreate, startRename, treeModel } from "./tree";
 import "./explorer.css";
 
 export default function ExplorerView() {
   const ws = useStore(workspaceState);
   const st = useStore(explorerState);
+  const filter = useStore(explorerFilter);
+  const input = useRef<HTMLInputElement>(null);
   const model = treeModel();
+
+  // The explorer shortcut lands in the filter box.
+  useEffect(
+    () =>
+      onReveal((id) => {
+        if (id !== "explorer") return;
+        requestAnimationFrame(() => {
+          input.current?.focus();
+          input.current?.select();
+        });
+      }),
+    [],
+  );
   const root = ws.status === "open" ? ws.info.root : "";
 
   const renderContextMenu: FileTreeProps["renderContextMenu"] = (item, ctx) => {
@@ -32,25 +50,45 @@ export default function ExplorerView() {
         <button onClick={run(() => void navigator.clipboard.writeText(`${root}/${rel}`))}>Copy Path</button>
         <button onClick={run(() => void revealItemInDir(`${root}/${rel}`))}>Reveal in Finder</button>
         {dir !== null && <button onClick={run(() => void terminal.open({ cwd: dir.replace(/\/$/, "") }))}>Open in Terminal</button>}
+        <hr />
+        <button onClick={run(() => void load())}>Refresh</button>
       </div>
     );
   };
 
   return (
     <div className="panel explorer">
-      <div className="panel-header">
-        <span className="explorer-root" title={root}>
-          {ws.status === "open" ? ws.info.name : "Explorer"}
-        </span>
-        <div className="spacer" />
+      <div className="explorer-bar">
+        <div className="explorer-filter">
+          <Search className="explorer-filter-icon" />
+          <input
+            ref={input}
+            className="input"
+            value={filter}
+            placeholder="Filter files"
+            onChange={(e) => setFilter(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const path = firstMatch();
+                if (path) void editor.open(path);
+              }
+              if (e.key === "Escape") {
+                if (filter) setFilter("");
+                else input.current?.blur();
+              }
+            }}
+          />
+          {filter && (
+            <button className="icon-btn" title="Clear filter" onClick={() => setFilter("")}>
+              <X />
+            </button>
+          )}
+        </div>
         <button className="icon-btn" title="New File" onClick={() => startCreate(null, false)}>
           <FilePlus />
         </button>
         <button className="icon-btn" title="New Folder" onClick={() => startCreate(null, true)}>
           <FolderPlus />
-        </button>
-        <button className="icon-btn" title="Refresh" onClick={() => void load()}>
-          <RefreshCw />
         </button>
       </div>
       <div className="explorer-tree">

@@ -1,22 +1,13 @@
-// Source control slice: the git domain with two placements, the left Source Control view and the
-// right Changes tool. Public surface: `scmView`, `changesTool`, `scm` (owner API), `scmExtras`.
+// Source control slice: the git domain and the right Changes tool, which diffs, stages, and commits.
+// Public surface: `changesTool`, `scm` (owner API), `scmExtras`.
 
 import { lazy } from "react";
-import { FileDiff, GitBranch } from "lucide-react";
-import { defineLeftView, defineRightTool, type SliceExtras } from "@/core/slice";
+import { FileDiff } from "lucide-react";
+import { defineRightTool, type SliceExtras } from "@/core/slice";
 import { derive } from "@/core/store";
 import * as s from "./state";
 
 export type { ScmState } from "./state";
-
-export const scmView = defineLeftView({
-  id: "scm",
-  title: "Source Control",
-  icon: GitBranch,
-  shortcut: "Mod+Shift+G",
-  component: lazy(() => import("./ScmView")),
-  useBadge: s.useChangedCount,
-});
 
 export const changesTool = defineRightTool({
   id: "changes",
@@ -25,7 +16,8 @@ export const changesTool = defineRightTool({
   shortcut: "Mod+Shift+D",
   component: lazy(() => import("./ChangesTool")),
   useBadge: s.useChangedCount,
-  available: derive(s.scmState, (st) => (st.status?.files.length ?? 0) > 0),
+  // Also shown when git status fails, since this tool is where that error and Refresh live.
+  available: derive(s.scmState, (st) => (st.status?.files.length ?? 0) > 0 || st.error !== null),
 });
 
 export const scm = {

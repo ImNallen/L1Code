@@ -5,7 +5,6 @@
   height: 36px;
   padding: 0 6px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
 }
 .preview-bar .preview-url {
   flex: 1;
@@ -43,7 +42,6 @@
 .preview-note {
   flex-shrink: 0;
   padding: 3px 10px;
-  border-top: 1px solid var(--border);
   color: var(--fg-subtle);
   font-size: var(--text-xs);
   white-space: nowrap;

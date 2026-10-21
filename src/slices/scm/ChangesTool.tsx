@@ -1,10 +1,12 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Columns2, FileText, RefreshCw, Rows2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Columns2, FileText, GitBranch, RefreshCw, Rows2, Square, SquareCheck, SquareMinus, Undo2 } from "lucide-react";
 import { PatchDiff, type FileDiffOptions } from "@pierre/diffs/react";
-import { errorMessage, rust } from "@/core/ipc";
+import { ask } from "@tauri-apps/plugin-dialog";
+import { errorMessage, rust, type GitFile } from "@/core/ipc";
 import { createStore, useStore } from "@/core/store";
 import { editor } from "@/slices/editor";
-import { focusStore, refresh, useScmState } from "./state";
+import { CommitBox } from "./CommitBox";
+import { discard, focusStore, groupFiles, refresh, stage, unstage, useScmState } from "./state";
 import { patchStats, splitPath, type PatchStats } from "./paths";
 import "./ChangesTool.css";
 
@@ -12,7 +14,11 @@ interface Item {
   readonly path: string;
   readonly patch: string;
   readonly stats: PatchStats;
+  /** In git status but without a patch: `git_diff` skips large or numerous untracked files. */
+  readonly omitted?: boolean;
 }
+
+const NO_PATCH: PatchStats = { additions: 0, deletions: 0, lines: 0, deleted: false, binary: false };
 
 interface DiffSet {
   readonly gen: number;
@@ -48,14 +54,25 @@ function toDiffSet(gen: number, patches: readonly { path: string; patch: string 
 }
 
 export default function ChangesTool() {
-  const { status, gen } = useScmState();
+  const { status, gen, error: statusError } = useScmState();
   const isRepo = status !== null;
+  const gitFiles = useMemo(() => new Map((status?.files ?? []).map((f) => [f.path, f])), [status]);
+  const groups = useMemo(() => groupFiles(status?.files ?? []), [status]);
   const [data, setData] = useState<DiffSet | null>(cached);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE);
   const style = useStore(diffStyle);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Every changed file gets a row, so files without a patch can still be staged or discarded.
+  const items = useMemo<readonly Item[]>(() => {
+    if (!data) return [];
+    if (!status || data.gen !== gen) return data.items;
+    const listed = new Set(data.items.map((i) => i.path));
+    const rest = status.files.filter((f) => !listed.has(f.path)).map((f) => ({ path: f.path, patch: "", stats: NO_PATCH, omitted: true }));
+    return rest.length ? [...data.items, ...rest] : data.items;
+  }, [data, status, gen]);
   const blocks = useRef(new Map<string, HTMLElement>());
   const latest = useRef(0);
 
@@ -86,7 +103,7 @@ export default function ChangesTool() {
   const doneSeq = useRef(0);
   useEffect(() => {
     if (!focus.path || focus.seq === doneSeq.current || !data) return;
-    const index = data.items.findIndex((i) => i.path === focus.path);
+    const index = items.findIndex((i) => i.path === focus.path);
     if (index < 0) {
       if (!loading) doneSeq.current = focus.seq;
       return;
@@ -97,19 +114,45 @@ export default function ChangesTool() {
     }
     doneSeq.current = focus.seq;
     blocks.current.get(focus.path)?.scrollIntoView({ block: "start" });
-  }, [focus, data, loading, limit]);
+  }, [focus, data, items, loading, limit]);
 
   const options = useMemo<FileDiffOptions<undefined, undefined>>(
     () => ({ theme: "pierre-dark", themeType: "dark", diffStyle: style, overflow: "scroll", disableFileHeader: true, unsafeCSS: DIFF_CSS }),
     [style],
   );
 
+  const allStaged = groups.staged.length > 0 && groups.changes.length === 0;
   const toolbar = (
     <div className="chg-toolbar">
-      {data && (
+      {status && (
         <>
+          <GitBranch className="chg-branch-icon" />
+          <span className="chg-branch" title={status.upstream ?? undefined}>
+            {status.branch ?? "detached HEAD"}
+          </span>
+          {status.ahead > 0 && (
+            <span className="chg-track" title={`${status.ahead} ahead of ${status.upstream ?? "upstream"}`}>
+              <ArrowUp />
+              {status.ahead}
+            </span>
+          )}
+          {status.behind > 0 && (
+            <span className="chg-track" title={`${status.behind} behind ${status.upstream ?? "upstream"}`}>
+              <ArrowDown />
+              {status.behind}
+            </span>
+          )}
+        </>
+      )}
+      {data && items.length > 0 && (
+        <>
+          <StageBox
+            state={allStaged ? "all" : groups.staged.length > 0 ? "some" : "none"}
+            title={allStaged ? "Unstage all" : "Stage all"}
+            onClick={() => void (allStaged ? unstage(groups.staged.map((f) => f.path)) : stage(groups.changes.map((f) => f.path)))}
+          />
           <span className="chg-count">
-            {data.items.length} {data.items.length === 1 ? "file" : "files"}
+            {items.length} {items.length === 1 ? "file" : "files"}
           </span>
           <span className="chg-add mono">+{data.additions}</span>
           <span className="chg-del mono">−{data.deletions}</span>
@@ -131,27 +174,28 @@ export default function ChangesTool() {
 
   let body: ReactNode;
   if (gen === 0 && !data) body = <div className="empty">Loading…</div>;
-  else if (!isRepo) body = <div className="empty">This folder is not a git repository.</div>;
+  else if (!isRepo) body = <div className="empty selectable">{statusError ? `Couldn't read git status: ${statusError}` : "This folder is not a git repository."}</div>;
   else if (!data) body = <div className="empty">{error ?? "Loading…"}</div>;
-  else if (data.items.length === 0) body = <div className="empty">No changes</div>;
+  else if (items.length === 0) body = <div className="empty">No changes</div>;
   else {
-    const shown = data.items.slice(0, limit);
+    const shown = items.slice(0, limit);
     body = (
       <>
         {shown.map((item) => (
           <FileBlock
             key={item.path}
             item={item}
+            file={gitFiles.get(item.path)}
             options={options}
             focused={item.path === focus.path}
             root={scrollRef}
             register={(el) => (el ? blocks.current.set(item.path, el) : blocks.current.delete(item.path))}
           />
         ))}
-        {data.items.length > limit && (
+        {items.length > limit && (
           <div className="chg-more">
             <button className="btn" onClick={() => setLimit((l) => l + PAGE)}>
-              Show {Math.min(PAGE, data.items.length - limit)} more of {data.items.length - limit}
+              Show {Math.min(PAGE, items.length - limit)} more of {items.length - limit}
             </button>
           </div>
         )}
@@ -162,6 +206,8 @@ export default function ChangesTool() {
   return (
     <div className="panel chg">
       {toolbar}
+      {status && status.files.length > 0 && <CommitBox stagedCount={groups.staged.length} totalCount={status.files.length} />}
+      {statusError && isRepo && <div className="chg-error selectable">Couldn't refresh git status: {statusError}</div>}
       {error && data && <div className="chg-error selectable">{error}</div>}
       <div className="panel-body chg-scroll native-scroll" ref={scrollRef}>
         {body}
@@ -172,12 +218,14 @@ export default function ChangesTool() {
 
 function FileBlock({
   item,
+  file,
   options,
   focused,
   root,
   register,
 }: {
   item: Item;
+  file: GitFile | undefined;
   options: FileDiffOptions<undefined, undefined>;
   focused: boolean;
   root: RefObject<HTMLDivElement | null>;
@@ -207,7 +255,8 @@ function FileBlock({
   }, [visible, root]);
 
   let content: ReactNode;
-  if (stats.binary) content = <div className="chg-note">Binary file changed.</div>;
+  if (item.omitted) content = <div className="chg-note">No diff shown. The file is over 1 MiB, or there are over 200 untracked files.</div>;
+  else if (stats.binary) content = <div className="chg-note">Binary file changed.</div>;
   else if (stats.lines === 0) content = <div className="chg-note">No textual changes.</div>;
   else if (stats.lines > LARGE_LINES && !forced)
     content = (
@@ -229,6 +278,7 @@ function FileBlock({
   return (
     <section className={`chg-file${focused ? " focused" : ""}`} ref={register}>
       <header className="chg-file-head" title={item.path}>
+        {file && <FileStageBox file={file} />}
         <span className={`chg-name${stats.deleted ? " chg-deleted" : ""}`}>{name}</span>
         {dir && <span className="chg-dir">{dir}</span>}
         <span className="spacer" />
@@ -239,10 +289,43 @@ function FileBlock({
             <FileText />
           </button>
         )}
+        {file?.unstaged && file.unstaged !== "conflicted" && file.staged !== "conflicted" && (
+          <button className="icon-btn" title="Discard changes" onClick={() => void confirmDiscard(file)}>
+            <Undo2 />
+          </button>
+        )}
       </header>
       <div ref={bodyRef}>{content}</div>
     </section>
   );
+}
+
+type Staged = "none" | "some" | "all";
+
+function StageBox({ state, title, onClick }: { state: Staged; title: string; onClick(): void }) {
+  const Icon = state === "all" ? SquareCheck : state === "some" ? SquareMinus : Square;
+  return (
+    <button className={`icon-btn chg-stage${state === "none" ? "" : " on"}`} title={title} aria-label={title} onClick={onClick}>
+      <Icon />
+    </button>
+  );
+}
+
+/** Checked when fully staged, a dash when partly staged. A conflict is staged to mark it resolved. */
+function FileStageBox({ file }: { file: GitFile }) {
+  if (file.staged === "conflicted" || file.unstaged === "conflicted")
+    return <StageBox state="none" title="Mark resolved" onClick={() => void stage([file.path])} />;
+  if (file.staged && !file.unstaged) return <StageBox state="all" title="Unstage" onClick={() => void unstage([file.path])} />;
+  return <StageBox state={file.staged ? "some" : "none"} title="Stage" onClick={() => void stage([file.path])} />;
+}
+
+async function confirmDiscard(file: GitFile) {
+  const untracked = file.unstaged === "untracked";
+  const ok = await ask(
+    untracked ? `Move the untracked file ${file.path} to the trash?` : `Discard changes to ${file.path}? This cannot be undone.`,
+    { title: "Discard changes", kind: "warning", okLabel: "Discard" },
+  );
+  if (ok) await discard(untracked ? [] : [file.path], untracked ? [file.path] : []);
 }
 
 /** `PatchDiff` throws on patches it can't parse (mode-only changes, odd headers). Show the raw text. */

@@ -1,20 +1,7 @@
-import type { ChangeKind } from "@/core/ipc";
-
 export function splitPath(path: string): { name: string; dir: string } {
   const i = path.lastIndexOf("/");
   return i < 0 ? { name: path, dir: "" } : { name: path.slice(i + 1), dir: path.slice(0, i) };
 }
-
-const LETTERS: Record<ChangeKind, string> = {
-  added: "A",
-  modified: "M",
-  deleted: "D",
-  renamed: "R",
-  untracked: "U",
-  conflicted: "!",
-};
-
-export const statusLetter = (kind: ChangeKind): string => LETTERS[kind];
 
 export interface PatchStats {
   readonly additions: number;

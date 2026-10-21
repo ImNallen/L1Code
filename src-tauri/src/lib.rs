@@ -4,7 +4,6 @@ mod gh;
 mod git;
 mod paths;
 mod pty;
-mod search;
 mod watch;
 mod workspace;
 
@@ -32,8 +31,6 @@ fn specta_builder() -> Builder<tauri::Wry> {
         git::git_commit,
         gh::gh_pr_view,
         gh::gh_pr_create_web,
-        search::search_text,
-        search::search_cancel,
         pty::pty_open,
         pty::pty_attach,
         pty::pty_write,

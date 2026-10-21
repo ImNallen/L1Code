@@ -47,8 +47,8 @@ function EmptyEditor() {
       <dl>
         <dt>Quick open</dt>
         <dd>{mod}P</dd>
-        <dt>Search in files</dt>
-        <dd>{mod}⇧F</dd>
+        <dt>Filter files</dt>
+        <dd>{mod}⇧E</dd>
         <dt>Terminal</dt>
         <dd>⌃`</dd>
         <dt>Toggle sidebars</dt>

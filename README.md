@@ -2,9 +2,9 @@
 
 A small, fast IDE for quick edits and testing. Built with Tauri 2 and React.
 
-- **Left:** Search, Explorer, and Source Control.
+- **Left:** the file tree, with a filter on top.
 - **Middle:** a tabbed CodeMirror editor.
-- **Right:** Preview, Pull Request, Terminal, and Changes.
+- **Right:** Preview, Pull Request, Terminal, and Changes, where you stage and commit.
 
 ## Develop
 
@@ -25,8 +25,7 @@ cd src-tauri && cargo test               # also regenerates src/core/bindings.ge
 | Action | Keys |
 | --- | --- |
 | Quick open | ⌘P |
-| Search in files | ⌘⇧F |
-| Explorer, Source Control | ⌘⇧E, ⌘⇧G |
+| Filter files | ⌘⇧E |
 | Terminal | ⌃` |
 | Changes | ⌘⇧D |
 | Toggle the left or right column | ⌘B, ⌘J |

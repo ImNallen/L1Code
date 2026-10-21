@@ -7,22 +7,17 @@ import { EditorMain, editorExtras } from "@/slices/editor";
 import { explorerExtras, explorerView } from "@/slices/explorer";
 import { prExtras, prTool } from "@/slices/pr";
 import { previewExtras, previewTool } from "@/slices/preview";
-import { changesTool, scmExtras, scmView } from "@/slices/scm";
-import { searchExtras, searchView } from "@/slices/search";
+import { changesTool, scmExtras } from "@/slices/scm";
 import { terminalExtras, terminalTool } from "@/slices/terminal";
 
 export const manifest = defineManifest({
   main: { component: EditorMain, extras: editorExtras },
-  left: [
-    { ...searchView, extras: searchExtras },
-    { ...explorerView, extras: explorerExtras },
-    { ...scmView, extras: scmExtras },
-  ],
+  left: [{ ...explorerView, extras: explorerExtras }],
   right: [
     { ...previewTool, extras: previewExtras },
     { ...prTool, extras: prExtras },
     { ...terminalTool, extras: terminalExtras },
-    changesTool,
+    { ...changesTool, extras: scmExtras },
   ],
 });
 
