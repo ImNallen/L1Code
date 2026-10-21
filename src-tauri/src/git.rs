@@ -261,7 +261,7 @@ pub(crate) async fn git_discard(state: State<'_, AppState>, paths: Vec<RelPath>,
             run(c)?;
         }
         for p in untracked {
-            trash::delete(p.resolve(&root)).map_err(|e| Error::Io(e.to_string()))?;
+            trash::delete(p.resolve(&root)?).map_err(|e| Error::Io(e.to_string()))?;
         }
         Ok(())
     })

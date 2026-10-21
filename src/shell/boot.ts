@@ -2,7 +2,7 @@
 // Rust keeps terminals only when the same folder is reopened.
 
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { IpcError } from "@/core/ipc";
+import { IpcError, rust } from "@/core/ipc";
 import { bindSession } from "@/core/session";
 import { allExtras, type PersistSpec } from "@/core/slice";
 import { toast } from "@/core/toast";
@@ -13,12 +13,15 @@ import { layoutSpec } from "./layout";
 
 const PENDING = "l1code.pending-open";
 
-/** Opens `absPath` (a folder, or a file inside the folder to open). Reloads if a folder is already open. */
+/**
+ * Opens `absPath`. A file inside the open folder opens as a tab. Anything else, including a
+ * subfolder of the open folder, switches workspaces, which reloads the page.
+ */
 export async function openPath(absPath: string): Promise<void> {
   const root = currentRoot();
-  if (root && (absPath === root || absPath.startsWith(root + "/"))) {
-    const rel = absPath.slice(root.length + 1);
-    if (rel) void editor.open(rel);
+  if (root === absPath) return;
+  if (root && absPath.startsWith(root + "/") && (await rust.appPathKind(absPath)) === "file") {
+    void editor.open(absPath.slice(root.length + 1));
     return;
   }
   if (root) {

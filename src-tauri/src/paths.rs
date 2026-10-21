@@ -47,8 +47,22 @@ impl RelPath {
         &self.0
     }
 
-    pub(crate) fn resolve(&self, root: &Path) -> PathBuf {
-        root.join(&self.0)
+    /// The absolute path of `self` under `root`, refusing any path that a symlink carries outside
+    /// it. `root` must be canonical. The deepest existing part of the path is canonicalized, so a
+    /// path to a file that doesn't exist yet is checked through its nearest existing ancestor.
+    pub(crate) fn resolve(&self, root: &Path) -> Result<PathBuf> {
+        let abs = root.join(&self.0);
+        let mut probe = abs.as_path();
+        loop {
+            match probe.canonicalize() {
+                Ok(real) if real.starts_with(root) => return Ok(abs),
+                Ok(_) => return Err(Error::InvalidPath(format!("{} resolves outside the workspace", self.0))),
+                Err(_) => match probe.parent() {
+                    Some(parent) if parent.starts_with(root) => probe = parent,
+                    _ => return Err(Error::InvalidPath(self.0.clone())),
+                },
+            }
+        }
     }
 }
 
@@ -70,6 +84,22 @@ mod tests {
         }
         assert_eq!(RelPath::parse("src/main.rs").unwrap().as_str(), "src/main.rs");
         assert_eq!(RelPath::parse("src/").unwrap().as_str(), "src");
+    }
+
+    #[test]
+    fn resolve_refuses_symlink_escapes() {
+        let outside = tempfile::tempdir().unwrap();
+        let ws = tempfile::tempdir().unwrap();
+        let root = ws.path().canonicalize().unwrap();
+        std::fs::write(outside.path().join("secret"), "x").unwrap();
+        std::os::unix::fs::symlink(outside.path(), root.join("link")).unwrap();
+        std::fs::create_dir(root.join("src")).unwrap();
+        let ok = |p: &str| RelPath::parse(p).unwrap().resolve(&root).is_ok();
+        assert!(!ok("link"));
+        assert!(!ok("link/secret"));
+        assert!(!ok("link/new-file"));
+        assert!(ok("src"));
+        assert!(ok("src/new/deep/file.rs"));
     }
 
     #[test]

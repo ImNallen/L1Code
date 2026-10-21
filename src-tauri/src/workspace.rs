@@ -25,7 +25,8 @@ pub(crate) struct Workspace {
 }
 
 impl Workspace {
-    pub(crate) fn path(&self, rel: &crate::paths::RelPath) -> PathBuf {
+    /// The absolute path for `rel`, refused if a symlink would take it outside the workspace.
+    pub(crate) fn path(&self, rel: &crate::paths::RelPath) -> Result<PathBuf> {
         rel.resolve(&self.root)
     }
 }
@@ -99,6 +100,25 @@ pub(crate) fn workspace_close(state: State<'_, AppState>) {
 #[specta::specta]
 pub(crate) fn app_initial_path(state: State<'_, AppState>) -> Option<String> {
     state.initial_path.lock().unwrap().take()
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum PathKind {
+    File,
+    Dir,
+    Missing,
+}
+
+/// Whether a path from the command line or a picker is a file or a folder. Stat only, no contents.
+#[tauri::command]
+#[specta::specta]
+pub(crate) fn app_path_kind(path: String) -> PathKind {
+    match std::fs::metadata(path) {
+        Ok(m) if m.is_dir() => PathKind::Dir,
+        Ok(_) => PathKind::File,
+        Err(_) => PathKind::Missing,
+    }
 }
 
 fn info(root: &Path) -> WorkspaceInfo {

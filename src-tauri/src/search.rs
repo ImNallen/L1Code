@@ -18,6 +18,8 @@ use crate::workspace::AppState;
 
 const MAX_MATCHES: usize = 10_000;
 const MAX_LINE_CHARS: usize = 300;
+/// Hits kept per file. Hitting it marks the whole search as truncated.
+const MAX_PER_FILE: usize = 1000;
 
 #[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -97,7 +99,7 @@ pub(crate) async fn search_text(state: State<'_, AppState>, query: SearchQuery, 
                         entry.path(),
                         UTF8(|line_no, line| {
                             hits.push(hit(&matcher, line_no, line));
-                            Ok(hits.len() < 1000)
+                            Ok(hits.len() < MAX_PER_FILE)
                         }),
                     );
                     if hits.is_empty() {
@@ -106,6 +108,7 @@ pub(crate) async fn search_text(state: State<'_, AppState>, query: SearchQuery, 
                     let mut t = total.lock().unwrap();
                     t.0 += 1;
                     t.1 += hits.len() as u32;
+                    t.2 |= hits.len() >= MAX_PER_FILE;
                     let _ = on_hits.send(vec![FileHits { path, hits }]);
                     if t.1 as usize >= MAX_MATCHES {
                         t.2 = true;

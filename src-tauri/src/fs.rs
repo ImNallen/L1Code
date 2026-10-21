@@ -53,7 +53,7 @@ pub(crate) fn hash(bytes: &[u8]) -> String {
 #[specta::specta]
 pub(crate) fn fs_read(state: State<'_, AppState>, path: RelPath) -> Result<ReadResult> {
     let ws = state.workspace()?;
-    read(&ws.path(&path))
+    read(&ws.path(&path)?)
 }
 
 pub(crate) fn read(abs: &Path) -> Result<ReadResult> {
@@ -95,7 +95,7 @@ pub(crate) fn fs_write(
     expect: WriteExpect,
 ) -> Result<WriteResult> {
     let ws = state.workspace()?;
-    write(&ws.path(&path), &ws.write_lock, &text, bom, crlf, &expect)
+    write(&ws.path(&path)?, &ws.write_lock, &text, bom, crlf, &expect)
 }
 
 pub(crate) fn write(abs: &Path, lock: &Mutex<()>, text: &str, bom: bool, crlf: bool, expect: &WriteExpect) -> Result<WriteResult> {
@@ -182,7 +182,7 @@ pub(crate) fn list(root: &Path) -> String {
 #[specta::specta]
 pub(crate) fn fs_create(state: State<'_, AppState>, path: RelPath, dir: bool) -> Result<()> {
     let ws = state.workspace()?;
-    let abs = ws.path(&path);
+    let abs = ws.path(&path)?;
     if abs.exists() {
         return Err(Error::InvalidPath(format!("{} already exists", path.as_str())));
     }
@@ -201,14 +201,14 @@ pub(crate) fn fs_create(state: State<'_, AppState>, path: RelPath, dir: bool) ->
 #[specta::specta]
 pub(crate) fn fs_rename(state: State<'_, AppState>, from: RelPath, to: RelPath) -> Result<()> {
     let ws = state.workspace()?;
-    let dest = ws.path(&to);
+    let dest = ws.path(&to)?;
     if dest.exists() {
         return Err(Error::InvalidPath(format!("{} already exists", to.as_str())));
     }
     if let Some(parent) = dest.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::rename(ws.path(&from), dest)?;
+    std::fs::rename(ws.path(&from)?, dest)?;
     Ok(())
 }
 
@@ -217,7 +217,7 @@ pub(crate) fn fs_rename(state: State<'_, AppState>, from: RelPath, to: RelPath) 
 #[specta::specta]
 pub(crate) fn fs_delete(state: State<'_, AppState>, path: RelPath) -> Result<()> {
     let ws = state.workspace()?;
-    trash::delete(ws.path(&path)).map_err(|e| Error::Io(e.to_string()))
+    trash::delete(ws.path(&path)?).map_err(|e| Error::Io(e.to_string()))
 }
 
 #[cfg(test)]

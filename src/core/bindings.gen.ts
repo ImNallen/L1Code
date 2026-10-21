@@ -17,6 +17,8 @@ export const commands = {
 	workspaceClose: () => __TAURI_INVOKE<void>("workspace_close"),
 	/**  The folder or file passed on the command line, if any. Returns it once. */
 	appInitialPath: () => __TAURI_INVOKE<string | null>("app_initial_path"),
+	/**  Whether a path from the command line or a picker is a file or a folder. Stat only, no contents. */
+	appPathKind: (path: string) => __TAURI_INVOKE<PathKind>("app_path_kind", { path }),
 	fsRead: (path: RelPath) => typedError<ReadResult, Error>(__TAURI_INVOKE("fs_read", { path })),
 	/**
 	 *  Writes `text` atomically (temp file, fsync, rename) if disk matches `expect`.
@@ -131,6 +133,8 @@ export type Hit = {
 	/**  Match ranges in `text` as character offsets `[start, end)`. */
 	ranges: ([number, number])[],
 };
+
+export type PathKind = "file" | "dir" | "missing";
 
 export type PrLookup = 
 /**  `gh` found no PR for this branch. */

@@ -110,7 +110,7 @@ fn shell() -> String {
 #[specta::specta]
 pub(crate) fn pty_open(state: State<'_, AppState>, cwd: Option<RelPath>, cols: u16, rows: u16) -> Result<TerminalInfo> {
     let ws = state.workspace()?;
-    let dir = cwd.map(|c| ws.path(&c)).filter(|p| p.is_dir()).unwrap_or_else(|| ws.root.clone());
+    let dir = cwd.and_then(|c| ws.path(&c).ok()).filter(|p| p.is_dir()).unwrap_or_else(|| ws.root.clone());
     let pair = native_pty_system()
         .openpty(PtySize { rows: rows.max(2), cols: cols.max(2), pixel_width: 0, pixel_height: 0 })
         .map_err(|e| Error::Io(e.to_string()))?;

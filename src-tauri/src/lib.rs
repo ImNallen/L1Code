@@ -17,6 +17,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
         workspace::workspace_open,
         workspace::workspace_close,
         workspace::app_initial_path,
+        workspace::app_path_kind,
         fs::fs_read,
         fs::fs_write,
         fs::fs_list,
