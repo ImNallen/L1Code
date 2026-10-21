@@ -37,9 +37,9 @@ export function TabBar() {
     },
     tabsEqual,
   );
-  if (!tabs.length) return null;
+  // Always rendered: with no title bar, its empty space is where the window is dragged from.
   return (
-    <div className="tabbar" role="tablist">
+    <div className="tabbar" role="tablist" data-tauri-drag-region>
       {tabs.map((t, i) => (
         <div
           key={t.path}

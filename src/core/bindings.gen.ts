@@ -55,8 +55,6 @@ export const commands = {
 	ghPrView: () => typedError<PrLookup, Error>(__TAURI_INVOKE("gh_pr_view")),
 	/**  Opens GitHub's "create pull request" page for the current branch in the browser. */
 	ghPrCreateWeb: () => typedError<null, Error>(__TAURI_INVOKE("gh_pr_create_web")),
-	searchText: (query: SearchQuery, onHits: Channel<FileHits[]>) => typedError<SearchSummary, Error>(__TAURI_INVOKE("search_text", { query, onHits })),
-	searchCancel: () => typedError<null, Error>(__TAURI_INVOKE("search_cancel")),
 	ptyOpen: (cwd: string | null, cols: number, rows: number) => typedError<TerminalInfo, Error>(__TAURI_INVOKE("pty_open", { cwd, cols, rows })),
 	/**
 	 *  Streams a session's output to `on_event`, starting with everything still in the ring.
@@ -82,11 +80,6 @@ export type Check = {
 
 /**  The one error type every command returns. Tagged so the frontend can branch on `kind`. */
 export type Error = { kind: "noWorkspace" } | { kind: "invalidPath"; message: string } | { kind: "notFound"; message: string } | { kind: "io"; message: string } | { kind: "git"; message: string } | { kind: "unavailable"; message: string };
-
-export type FileHits = {
-	path: RelPath,
-	hits: Hit[],
-};
 
 export type FilePatch = {
 	path: string,
@@ -125,15 +118,6 @@ export type GitStatus = {
 	files: GitFile[],
 };
 
-export type Hit = {
-	/**  1-based line number. */
-	line: number,
-	/**  The line, trimmed to a preview length. */
-	text: string,
-	/**  Match ranges in `text` as character offsets `[start, end)`. */
-	ranges: ([number, number])[],
-};
-
 export type PathKind = "file" | "dir" | "missing";
 
 export type PrLookup = 
@@ -167,20 +151,6 @@ export type ReadResult = { kind: "text"; text: string; hash: string; bom: boolea
 
 /**  Workspace-relative POSIX path with no `..`, no root, no empty segments. */
 export type RelPath = string;
-
-export type SearchQuery = {
-	pattern: string,
-	regex: boolean,
-	caseSensitive: boolean,
-	wholeWord: boolean,
-};
-
-export type SearchSummary = {
-	files: number,
-	matches: number,
-	truncated: boolean,
-	cancelled: boolean,
-};
 
 export type TerminalInfo = {
 	id: number,

@@ -16,7 +16,6 @@ export const explorerView = defineLeftView({
   icon: FolderTree,
   shortcut: "Mod+Shift+E",
   component: lazy(() => import("./ExplorerView")),
-  keepAlive: true,
 });
 
 export const explorer = {

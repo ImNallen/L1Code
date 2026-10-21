@@ -134,7 +134,7 @@ export const discard = (paths: string[], untracked: string[]) =>
   paths.length || untracked.length ? mutate("Discard", () => rust.gitDiscard(paths, untracked)) : Promise.resolve(true);
 export const commit = (message: string, stageAll: boolean) => mutate("Commit", () => rust.gitCommit(message, stageAll));
 
-// The draft commit message survives switching left views.
+// The draft commit message survives the Changes tool unmounting.
 const message = createStore("");
 export const useCommitMessage = (): string => useStore(message);
 export const setCommitMessage = (m: string): void => message.set(m);

@@ -1,17 +1,18 @@
-// The window: title bar, three resizable columns, overlays, and toasts.
+// The window: three resizable columns, overlays, and toasts. There is no title bar. The top row of
+// each column is the drag region, and the left one leaves room for the macOS traffic lights.
 
 import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Group, Panel, Separator, type PanelImperativeHandle } from "react-resizable-panels";
-import { PanelLeft, PanelRight, Plus, Search as SearchIcon, X } from "lucide-react";
+import { PanelLeft, PanelRight, Plus, X } from "lucide-react";
 import { chordLabel, matchesChord } from "@/core/keys";
-import { onReveal } from "@/core/reveal";
+import { onReveal, reveal } from "@/core/reveal";
 import { allExtras, type Command, type LeftView, type RightTool } from "@/core/slice";
 import { useStore } from "@/core/store";
 import { dismissToast, toasts } from "@/core/toast";
 import { workspaceState } from "@/core/workspace";
-import { manifest, type LeftViewId, type RightToolId } from "@/slices/manifest";
+import { manifest, type RightToolId } from "@/slices/manifest";
 import { pickFolder } from "./boot";
-import { closeTool, columnResized, layout, revealView, setColumnOpen, showLeft, showRight, toggleColumn, toggleView } from "./layout";
+import { closeTool, columnResized, layout, revealView, showRight, toggleColumn, toggleView } from "./layout";
 import { Welcome } from "./Welcome";
 import "./shell.css";
 
@@ -27,9 +28,9 @@ const shellCommands: Command[] = [
 const commands: Command[] = [
   ...shellCommands,
   ...extras.flatMap((e) => e.commands ?? []),
-  ...[...manifest.left, ...manifest.right]
-    .filter((v) => v.shortcut)
-    .map((v) => ({ id: `reveal.${v.id}`, chord: v.shortcut!, run: () => toggleView(v.id) })),
+  // Left views share one column, so their shortcuts only reveal. `reveal` also lets a view focus itself.
+  ...manifest.left.filter((v) => v.shortcut).map((v) => ({ id: `reveal.${v.id}`, chord: v.shortcut!, run: () => reveal(v.id) })),
+  ...manifest.right.filter((v) => v.shortcut).map((v) => ({ id: `reveal.${v.id}`, chord: v.shortcut!, run: () => toggleView(v.id) })),
 ];
 
 function useGlobalKeys() {
@@ -65,8 +66,8 @@ export function Shell() {
   const ws = useStore(workspaceState);
   return (
     <div className="app">
-      <TitleBar />
-      <div className="app-body">{ws.status === "open" ? <Workbench /> : <Welcome />}</div>
+      {ws.status === "open" ? <Workbench /> : <Welcome />}
+      {ws.status !== "open" && <div className="drag-strip" data-tauri-drag-region />}
       {ws.status === "open" &&
         extras.map((e, i) => {
           const Overlay = e.overlay;
@@ -81,41 +82,15 @@ export function Shell() {
   );
 }
 
-function TitleBar() {
-  const ws = useStore(workspaceState);
-  const leftOpen = useStore(layout, (s) => s.leftOpen);
-  const rightOpen = useStore(layout, (s) => s.rightOpen);
-  const open = ws.status === "open";
+/** Shows or hides a side column. Sits in the column's top row, or at the editor's edge while the column is hidden. */
+function ColumnToggle({ side }: { side: "left" | "right" }) {
+  const open = useStore(layout, (s) => (side === "left" ? s.leftOpen : s.rightOpen));
+  const Icon = side === "left" ? PanelLeft : PanelRight;
+  const label = `${open ? "Hide" : "Show"} ${side === "left" ? "sidebar" : "tools"} (${chordLabel(side === "left" ? "Mod+b" : "Mod+j")})`;
   return (
-    <header className="titlebar" data-tauri-drag-region>
-      <div className="titlebar-left" data-tauri-drag-region>
-        {open && (
-          <button className={`icon-btn${leftOpen ? " active" : ""}`} title={`Toggle sidebar (${chordLabel("Mod+b")})`} onClick={() => toggleColumn("left")}>
-            <PanelLeft />
-          </button>
-        )}
-      </div>
-      <div className="titlebar-center" data-tauri-drag-region>
-        {open ? (
-          <button className="titlebar-search" onClick={() => void commands.find((c) => c.id === "explorer.quickOpen")?.run()}>
-            <SearchIcon size={13} />
-            <span>{ws.info.name}</span>
-            <kbd>{chordLabel("Mod+p")}</kbd>
-          </button>
-        ) : (
-          <span className="titlebar-title" data-tauri-drag-region>
-            L1Code
-          </span>
-        )}
-      </div>
-      <div className="titlebar-right" data-tauri-drag-region>
-        {open && (
-          <button className={`icon-btn${rightOpen ? " active" : ""}`} title={`Toggle tools (${chordLabel("Mod+j")})`} onClick={() => toggleColumn("right")}>
-            <PanelRight />
-          </button>
-        )}
-      </div>
-    </header>
+    <button className={`icon-btn column-toggle ${side}`} title={label} aria-label={label} onClick={() => toggleColumn(side)}>
+      <Icon />
+    </button>
   );
 }
 
@@ -147,13 +122,16 @@ function Workbench() {
         className="column column-left"
         onResize={(size, _id, prev) => prev && columnResized("left", size.inPixels)}
       >
-        <LeftColumn active={st.left} />
+        <LeftColumn />
       </Panel>
       <Separator className="sash" />
-      <Panel id="main" minSize={300} className="column column-main">
+      {/* A hidden side column leaves its toggle at the editor's edge; `--inset-*` keeps tabs clear of it. */}
+      <Panel id="main" minSize={300} className={`column column-main${st.leftOpen ? "" : " inset-left"}${st.rightOpen ? "" : " inset-right"}`}>
         <Suspense fallback={null}>
           <Main />
         </Suspense>
+        {!st.leftOpen && <ColumnToggle side="left" />}
+        {!st.rightOpen && <ColumnToggle side="right" />}
       </Panel>
       <Separator className="sash" />
       <Panel
@@ -178,16 +156,22 @@ function syncPanel(p: PanelImperativeHandle, open: boolean, width: number) {
   if (!open && isOpen) p.collapse();
 }
 
-function LeftColumn({ active }: { active: LeftViewId }) {
+function LeftColumn() {
+  const ws = useStore(workspaceState);
   return (
     <div className="side">
-      <div className="segmented" role="tablist">
-        {manifest.left.map((v) => (
-          <Segment key={v.id} view={v} active={v.id === active} onClick={() => showLeft(v.id as LeftViewId)} />
-        ))}
+      <div className="side-top traffic-lights" data-tauri-drag-region>
+        <ColumnToggle side="left" />
+        <span className="side-title" title={ws.status === "open" ? ws.info.root : undefined} data-tauri-drag-region>
+          {ws.status === "open" ? ws.info.name : ""}
+        </span>
       </div>
-      <div className="side-body">
-        {manifest.left.map((v) => (v.id === active || v.keepAlive ? <ViewHost key={v.id} view={v} visible={v.id === active} /> : null))}
+      <div className="side-body side-stack">
+        {manifest.left.map((v) => (
+          <Suspense key={v.id} fallback={<div className="empty">Loading…</div>}>
+            <v.component />
+          </Suspense>
+        ))}
       </div>
     </div>
   );
@@ -217,7 +201,7 @@ function RightColumn({ active, visited, closed }: { active: RightToolId; visited
   const current = open.find((v) => v.id === active) ?? open[0];
   return (
     <div className="side">
-      <div className="tool-tabs" role="tablist">
+      <div className="tool-tabs" role="tablist" data-tauri-drag-region>
         {open.map((v) => (
           <ToolTab
             key={v.id}
@@ -228,10 +212,8 @@ function RightColumn({ active, visited, closed }: { active: RightToolId; visited
           />
         ))}
         {reopenable.length > 0 && <ReopenMenu tools={reopenable} />}
-        <div className="spacer" />
-        <button className="icon-btn" title={`Hide panel (${chordLabel("Mod+j")})`} onClick={() => setColumnOpen("right", false)}>
-          <PanelRight />
-        </button>
+        <div className="spacer" data-tauri-drag-region />
+        <ColumnToggle side="right" />
       </div>
       <div className="side-body">
         {open.map((v) =>
@@ -315,17 +297,6 @@ function ViewHost({ view, visible }: { view: LeftView | RightTool; visible: bool
 function Badge({ view }: { view: LeftView | RightTool }) {
   const n = view.useBadge?.() ?? null;
   return n ? <span className="badge">{n > 999 ? "999+" : n}</span> : null;
-}
-
-function Segment({ view, active, onClick }: { view: LeftView; active: boolean; onClick(): void }) {
-  const Icon = view.icon;
-  return (
-    <button role="tab" aria-selected={active} className={`segment${active ? " active" : ""}`} title={view.shortcut ? `${view.title} (${chordLabel(view.shortcut)})` : view.title} onClick={onClick}>
-      <Icon size={14} />
-      {active && <span>{view.title}</span>}
-      {view.useBadge && <Badge view={view} />}
-    </button>
-  );
 }
 
 function ToolTab({ view, active, onClick, onClose }: { view: RightTool; active: boolean; onClick(): void; onClose(): void }): ReactNode {

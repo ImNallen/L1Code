@@ -1,4 +1,4 @@
-// Owns which left view and right tool are showing, column visibility, and column sizes.
+// Owns which right tool is showing, column visibility, and column sizes.
 // Valid ids come from the manifest, so a stale id from an older session falls back to the default.
 
 import type { PersistSpec } from "@/core/slice";
@@ -6,7 +6,6 @@ import { createStore, watch, type ReadStore } from "@/core/store";
 import { manifest, type LeftViewId, type RightToolId } from "@/slices/manifest";
 
 export interface LayoutState {
-  readonly left: LeftViewId;
   readonly right: RightToolId;
   readonly leftOpen: boolean;
   readonly rightOpen: boolean;
@@ -21,11 +20,9 @@ export interface LayoutState {
 
 const leftIds = manifest.left.map((v) => v.id) as LeftViewId[];
 const rightIds = manifest.right.map((v) => v.id) as RightToolId[];
-const defaultLeft: LeftViewId = leftIds.includes("explorer" as LeftViewId) ? ("explorer" as LeftViewId) : leftIds[0]!;
 const defaultRight: RightToolId = rightIds.includes("terminal" as RightToolId) ? ("terminal" as RightToolId) : rightIds[0]!;
 
 const store = createStore<LayoutState>({
-  left: defaultLeft,
   right: defaultRight,
   leftOpen: true,
   rightOpen: false,
@@ -35,10 +32,6 @@ const store = createStore<LayoutState>({
   closed: [],
 });
 export const layout: ReadStore<LayoutState> = store;
-
-export function showLeft(id: LeftViewId): void {
-  store.update((s) => ({ ...s, left: id, leftOpen: true }));
-}
 
 export function showRight(id: RightToolId): void {
   store.update((s) => ({
@@ -57,15 +50,14 @@ export function closeTool(id: RightToolId): void {
 
 /** Show a left view or right tool by id. Unknown ids are ignored. */
 export function revealView(id: string): void {
-  if ((leftIds as string[]).includes(id)) showLeft(id as LeftViewId);
+  if ((leftIds as string[]).includes(id)) setColumnOpen("left", true);
   else if ((rightIds as string[]).includes(id)) showRight(id as RightToolId);
 }
 
-/** The shortcut for a view toggles it: shows it, or hides its column if it is already showing. */
+/** A right tool's shortcut toggles it: shows it, or hides the column if it is already showing. */
 export function toggleView(id: string): void {
   const s = store.get();
-  if (s.leftOpen && s.left === id) setColumnOpen("left", false);
-  else if (s.rightOpen && s.right === id && !(s.closed as string[]).includes(id)) setColumnOpen("right", false);
+  if (s.rightOpen && s.right === id && !(s.closed as string[]).includes(id)) setColumnOpen("right", false);
   else revealView(id);
 }
 
@@ -99,20 +91,19 @@ export function columnResized(side: "left" | "right", px: number): void {
   });
 }
 
-type Saved = Pick<LayoutState, "left" | "right" | "leftOpen" | "rightOpen" | "leftWidth" | "rightWidth" | "closed">;
+type Saved = Pick<LayoutState, "right" | "leftOpen" | "rightOpen" | "leftWidth" | "rightWidth" | "closed">;
 
 export const layoutSpec: PersistSpec<Saved> = {
   key: "layout",
   snapshot: () => {
-    const { left, right, leftOpen, rightOpen, leftWidth, rightWidth, closed } = store.get();
-    return { left, right, leftOpen, rightOpen, leftWidth, rightWidth, closed };
+    const { right, leftOpen, rightOpen, leftWidth, rightWidth, closed } = store.get();
+    return { right, leftOpen, rightOpen, leftWidth, rightWidth, closed };
   },
   decode(raw) {
     if (!raw || typeof raw !== "object") return undefined;
     const r = raw as Partial<Saved>;
     const width = (v: unknown, d: number) => (typeof v === "number" && v >= 160 && v <= 2000 ? v : d);
     return {
-      left: (leftIds as string[]).includes(r.left as string) ? (r.left as LeftViewId) : defaultLeft,
       right: (rightIds as string[]).includes(r.right as string) ? (r.right as RightToolId) : defaultRight,
       leftOpen: typeof r.leftOpen === "boolean" ? r.leftOpen : true,
       rightOpen: typeof r.rightOpen === "boolean" ? r.rightOpen : false,
@@ -124,5 +115,5 @@ export const layoutSpec: PersistSpec<Saved> = {
   restore(v) {
     store.update((s) => ({ ...s, ...v, visited: v.rightOpen ? [v.right] : [] }));
   },
-  subscribe: (l) => watch(store, (s) => [s.left, s.right, s.leftOpen, s.rightOpen, s.leftWidth, s.rightWidth, s.closed.join(",")].join("|"), l),
+  subscribe: (l) => watch(store, (s) => [s.right, s.leftOpen, s.rightOpen, s.leftWidth, s.rightWidth, s.closed.join(",")].join("|"), l),
 };

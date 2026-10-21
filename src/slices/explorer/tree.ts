@@ -25,6 +25,21 @@ let model: FileTree | null = null;
 /** A row added by "New File/Folder" that becomes real only when its rename is confirmed. */
 let pendingNew: { path: string; dir: boolean } | null = null;
 
+/** The filter typed above the tree. The model hides every row that doesn't match it. */
+const filterStore = createStore("");
+export const explorerFilter: ReadStore<string> = filterStore;
+
+export function setFilter(value: string): void {
+  filterStore.set(value);
+  model?.setSearch(value || null);
+}
+
+/** The first file the filter matches, for Enter in the filter box. */
+export function firstMatch(): string | null {
+  const hit = model?.getSearchMatchingPaths().find((p) => !isDirPath(p));
+  return hit ? stripSlash(hit) : null;
+}
+
 export function treeModel(): FileTree | null {
   return model;
 }
@@ -48,11 +63,14 @@ export async function load(): Promise<void> {
   const preparedInput = prepareFileTreeInput(list);
   if (model) {
     model.resetPaths({ preparedInput });
+    if (filterStore.get()) model.setSearch(filterStore.get());
   } else {
     model = new FileTree({
       preparedInput,
       flattenEmptyDirectories: true,
       initialExpansion: "closed",
+      fileTreeSearchMode: "hide-non-matches",
+      initialSearchQuery: filterStore.get() || null,
       stickyFolders: true,
       density: "compact",
       composition: { contextMenu: { enabled: true, triggerMode: "right-click" } },
@@ -75,6 +93,7 @@ export function dispose(): void {
   model = null;
   paths = new Set();
   files = [];
+  filterStore.set("");
   store.set({ status: "idle", gen: 0, fileCount: 0 });
 }
 

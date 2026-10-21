@@ -5,7 +5,6 @@
   height: 34px;
   padding: 0 6px 0 12px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
   font-size: var(--text-sm);
 }
 .chg-toolbar .spacer,
@@ -14,6 +13,63 @@
 }
 .chg-count {
   color: var(--fg-muted);
+}
+.chg-branch-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: -4px;
+  color: var(--fg-subtle);
+  flex-shrink: 0;
+}
+.chg-branch {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.chg-track {
+  display: inline-flex;
+  align-items: center;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+}
+.chg-track svg {
+  width: 11px;
+  height: 11px;
+}
+.chg-stage {
+  width: 20px;
+  height: 20px;
+  color: var(--fg-subtle);
+}
+.chg-stage.on {
+  color: var(--accent);
+}
+.chg-stage svg {
+  width: 14px;
+  height: 14px;
+}
+
+.chg-commit {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+  padding: 2px 10px 8px;
+  flex-shrink: 0;
+}
+.chg-commit textarea {
+  flex: 1;
+  min-height: 34px;
+  max-height: 160px;
+  resize: vertical;
+  padding-top: 7px;
+  font-size: var(--text-sm);
+}
+.chg-commit .btn {
+  height: auto;
+  align-self: stretch;
 }
 .chg-add {
   color: var(--added);
@@ -46,9 +102,6 @@
   padding-bottom: 24px;
 }
 
-.chg-file {
-  border-bottom: 1px solid var(--border);
-}
 .chg-file-head {
   position: sticky;
   top: 0;
@@ -57,9 +110,8 @@
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 4px 0 12px;
+  padding: 0 4px 0 6px;
   background: var(--bg-elev);
-  border-bottom: 1px solid var(--border);
   font-size: var(--text-sm);
   white-space: nowrap;
 }

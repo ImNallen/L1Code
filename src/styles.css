@@ -251,27 +251,6 @@ textarea.input {
   text-align: center;
 }
 
-.status-letter {
-  width: 14px;
-  flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  text-align: center;
-}
-.status-added,
-.status-untracked {
-  color: var(--added);
-}
-.status-modified,
-.status-renamed {
-  color: var(--modified);
-}
-.status-deleted,
-.status-conflicted {
-  color: var(--deleted);
-}
-
 .mono {
   font-family: var(--font-mono);
 }

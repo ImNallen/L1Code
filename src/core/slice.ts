@@ -25,7 +25,7 @@ interface SliceBase<Id extends string> {
   /** Reveals this slice's placement, e.g. "Mod+Shift+F". */
   readonly shortcut?: string;
   readonly component: ViewComponent;
-  /** Stay mounted (hidden) when another tab is selected. */
+  /** Right tools: stay mounted (hidden) when another tab is selected. Left views always stay mounted. */
   readonly keepAlive?: boolean;
   /** Small count shown next to the title, e.g. changed files. */
   readonly useBadge?: () => number | null;

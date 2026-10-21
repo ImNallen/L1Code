@@ -1,22 +1,13 @@
-// Source control slice: the git domain with two placements, the left Source Control view and the
-// right Changes tool. Public surface: `scmView`, `changesTool`, `scm` (owner API), `scmExtras`.
+// Source control slice: the git domain and the right Changes tool, which diffs, stages, and commits.
+// Public surface: `changesTool`, `scm` (owner API), `scmExtras`.
 
 import { lazy } from "react";
-import { FileDiff, GitBranch } from "lucide-react";
-import { defineLeftView, defineRightTool, type SliceExtras } from "@/core/slice";
+import { FileDiff } from "lucide-react";
+import { defineRightTool, type SliceExtras } from "@/core/slice";
 import { derive } from "@/core/store";
 import * as s from "./state";
 
 export type { ScmState } from "./state";
-
-export const scmView = defineLeftView({
-  id: "scm",
-  title: "Source Control",
-  icon: GitBranch,
-  shortcut: "Mod+Shift+G",
-  component: lazy(() => import("./ScmView")),
-  useBadge: s.useChangedCount,
-});
 
 export const changesTool = defineRightTool({
   id: "changes",
