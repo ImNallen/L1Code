@@ -1,9 +1,10 @@
-// The Fonts card on the Appearance panel: one row per font surface with its size and a live preview
-// in that surface's font.
+// The Fonts card on the Appearance panel: one row per font surface with its family, its size, and a
+// live preview in that surface's font.
 
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { ChevronDown } from "lucide-react";
 import { useStore } from "@/core/store";
+import FontPicker, { loadFonts } from "./FontPicker";
 import { fontStack, fontSurfaces, type FontSurface } from "./fonts";
 import { setSetting, settingsState, useSetting } from "./store";
 
@@ -16,6 +17,8 @@ const SAMPLE: Readonly<Record<FontSurface, string>> = {
 };
 
 export default function FontSettings() {
+  // Load the installed list now, not when a picker opens: the closed pickers name the default face from it.
+  useEffect(loadFonts, []);
   return (
     <div className="settings-card">
       {SURFACES.map((s) => (
@@ -33,12 +36,13 @@ function FontRow({ surface }: { surface: FontSurface }) {
   return (
     <div className="settings-row font-row">
       <div className="settings-text">
-        <label id={`${id}-label`} htmlFor={`${id}-size`}>
+        <label id={`${id}-label`} htmlFor={`${id}-family`}>
           {def.label}
         </label>
         <p id={`${id}-desc`}>{def.description}</p>
       </div>
       <div className="font-controls">
+        <FontPicker surface={surface} id={`${id}-family`} labelledBy={`${id}-label`} describedBy={`${id}-desc`} />
         <div className="settings-select">
           <select
             id={`${id}-size`}

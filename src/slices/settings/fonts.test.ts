@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fontsCss, fontStack } from "./fonts";
+import { defaultFace, fontsCss, fontStack } from "./fonts";
 import { defaultSettings } from "./model";
 
 const UI = '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif';
@@ -54,5 +54,25 @@ describe("fontsCss", () => {
 
   it("is one :root rule", () => {
     expect(fontsCss(defaultSettings)).toMatch(/^:root\{[^{}]*\}$/);
+  });
+});
+
+describe("defaultFace", () => {
+  const installed = new Set(["Menlo", "JetBrains Mono"]);
+
+  it("names the first installed family of the stack", () => {
+    expect(defaultFace(MONO, installed, true)).toBe("JetBrains Mono");
+    expect(defaultFace(`"Missing", ${MONO}`, installed, false)).toBe("JetBrains Mono");
+  });
+
+  it("names the face a system keyword draws when no earlier family is installed", () => {
+    expect(defaultFace(MONO, new Set(["Menlo"]), true)).toBe("SF Mono");
+    expect(defaultFace(MONO, new Set(["Menlo"]), false)).toBe("Menlo");
+    expect(defaultFace(UI, new Set(), true)).toBe("SF Pro");
+    expect(defaultFace(UI, new Set(), false)).toBe("Sans serif");
+  });
+
+  it("is null when nothing in the stack is known", () => {
+    expect(defaultFace('"Missing", "Also Missing"', installed, true)).toBeNull();
   });
 });

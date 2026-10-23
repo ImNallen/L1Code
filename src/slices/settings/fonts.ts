@@ -86,3 +86,20 @@ export function fontsCss(s: Settings): string {
     `--editor-font-size:${s.editorFontSize}px;--text-xs:${base - 2}px;--text-sm:${base - 1}px;--text-md:${base}px;}`
   );
 }
+
+// What WebKit draws for the system keywords on macOS. Elsewhere `-apple-system` means nothing and is skipped.
+const SYSTEM_FACES: Readonly<Record<"mac" | "other", Readonly<Record<string, string>>>> = {
+  mac: { "-apple-system": "SF Pro", "system-ui": "SF Pro", "ui-monospace": "SF Mono" },
+  other: { "system-ui": "System UI" },
+};
+const GENERIC_FACES: Readonly<Record<string, string>> = { "sans-serif": "Sans serif", serif: "Serif", monospace: "Monospace" };
+
+/** The face a stack renders in: its first installed family, or the face a system keyword stands for. */
+export function defaultFace(stack: string, installed: ReadonlySet<string>, mac: boolean): string | null {
+  for (const raw of stack.split(",")) {
+    const name = raw.trim().replace(/^["']|["']$/g, "");
+    const face = SYSTEM_FACES[mac ? "mac" : "other"][name] ?? GENERIC_FACES[name] ?? (installed.has(name) ? name : undefined);
+    if (face) return face;
+  }
+  return null;
+}
