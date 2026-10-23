@@ -125,9 +125,7 @@ kbd {
 .side-footer {
   flex-shrink: 0;
   padding: 6px;
-  border-top: 1px solid var(--border);
 }
-.side-footer-btn,
 .settings-nav-item {
   display: flex;
   align-items: center;
@@ -143,12 +141,10 @@ kbd {
   text-align: left;
   cursor: pointer;
 }
-.side-footer-btn:hover,
 .settings-nav-item:hover {
   background: var(--bg-hover);
   color: var(--fg);
 }
-.side-footer-btn svg,
 .settings-nav-item svg {
   width: 15px;
   height: 15px;
@@ -165,7 +161,6 @@ kbd {
   background: var(--bg-active);
   color: var(--fg);
 }
-.side-footer-btn:focus-visible,
 .settings-nav-item:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: -1px;
