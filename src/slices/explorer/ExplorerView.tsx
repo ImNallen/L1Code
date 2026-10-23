@@ -1,13 +1,12 @@
 import { FileTree, type FileTreeProps } from "@pierre/trees/react";
 import { useEffect, useRef } from "react";
 import { FilePlus, FolderPlus, Search, X } from "lucide-react";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { onReveal } from "@/core/reveal";
 import { useStore } from "@/core/store";
 import { workspaceState } from "@/core/workspace";
-import { terminal } from "@/slices/terminal";
 import { editor } from "@/slices/editor";
-import { directoryFor, explorerFilter, explorerState, firstMatch, load, remove, setFilter, startCreate, startRename, treeModel } from "./tree";
+import { captureTreeInput, clearTreeInput, explorerFilter, explorerState, firstMatch, nodeFor, setFilter, startCreate, treeModel } from "./tree";
+import { ExplorerContextMenu } from "./ExplorerContextMenu";
 import "./explorer.css";
 
 export default function ExplorerView() {
@@ -16,6 +15,7 @@ export default function ExplorerView() {
   const filter = useStore(explorerFilter);
   const input = useRef<HTMLInputElement>(null);
   const model = treeModel();
+  useEffect(() => clearTreeInput, [model]);
 
   // The explorer shortcut lands in the filter box.
   useEffect(
@@ -32,28 +32,9 @@ export default function ExplorerView() {
   const root = ws.status === "open" ? ws.info.root : "";
 
   const renderContextMenu: FileTreeProps["renderContextMenu"] = (item, ctx) => {
-    const dir = directoryFor(item.path);
-    const run = (fn: () => void) => () => {
-      ctx.close({ restoreFocus: false });
-      fn();
-    };
-    const rel = item.path.replace(/\/$/, "");
-    return (
-      <div className="ctx-menu" data-file-tree-context-menu-root="true">
-        <button onClick={run(() => startCreate({ kind: "item", path: item.path }, false))}>Add File…</button>
-        <button onClick={run(() => startCreate({ kind: "item", path: item.path }, true))}>Add Folder…</button>
-        <hr />
-        <button onClick={run(() => startRename(item.path))}>Rename…</button>
-        <button onClick={run(() => void remove(item.path))}>Delete</button>
-        <hr />
-        <button onClick={run(() => void navigator.clipboard.writeText(rel))}>Copy Relative Path</button>
-        <button onClick={run(() => void navigator.clipboard.writeText(`${root}/${rel}`))}>Copy Path</button>
-        <button onClick={run(() => void revealItemInDir(`${root}/${rel}`))}>Reveal in Finder</button>
-        {dir !== null && <button onClick={run(() => void terminal.open({ cwd: dir.replace(/\/$/, "") }))}>Open in Terminal</button>}
-        <hr />
-        <button onClick={run(() => void load())}>Refresh</button>
-      </div>
-    );
+    const node = nodeFor(item.path);
+    if (!node) return null;
+    return <ExplorerContextMenu node={node} root={root} close={() => ctx.close({ restoreFocus: false })} />;
   };
 
   return (
@@ -94,7 +75,13 @@ export default function ExplorerView() {
       </div>
       <div className="explorer-tree">
         {model ? (
-          <FileTree model={model} renderContextMenu={renderContextMenu} style={{ height: "100%" }} />
+          <FileTree
+            model={model}
+            renderContextMenu={renderContextMenu}
+            onClickCapture={(event) => captureTreeInput(event.nativeEvent)}
+            onKeyDownCapture={(event) => captureTreeInput(event.nativeEvent)}
+            style={{ height: "100%" }}
+          />
         ) : (
           <div className="empty">{st.status === "failed" ? "Couldn't list files." : "Loading files…"}</div>
         )}
