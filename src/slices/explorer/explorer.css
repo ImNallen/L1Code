@@ -37,6 +37,12 @@
   flex: 1;
   min-width: 0;
   margin-right: 4px;
+  border-radius: var(--radius-sm);
+  transition: background-color 120ms ease;
+}
+.explorer-filter:hover,
+.explorer-filter:focus-within {
+  background: var(--bg-hover);
 }
 .explorer-filter .input {
   height: 26px;

@@ -80,7 +80,7 @@ kbd {
 }
 .column-main > .column-toggle {
   position: absolute;
-  top: 5px;
+  top: calc((var(--titlebar-h) - 24px) / 2);
   z-index: 6;
 }
 .column-main > .column-toggle.left {
@@ -94,7 +94,7 @@ kbd {
 .side-top {
   display: flex;
   align-items: center;
-  height: 34px;
+  height: var(--titlebar-h);
   flex-shrink: 0;
   padding: 0 6px;
 }
@@ -126,7 +126,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 2px;
-  height: 34px;
+  height: var(--titlebar-h);
   padding: 0 6px;
   flex-shrink: 0;
   overflow-x: auto;
