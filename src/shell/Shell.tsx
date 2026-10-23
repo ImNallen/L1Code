@@ -205,8 +205,9 @@ function LeftColumn() {
       {section && <SettingsNav active={section} />}
       <div className="side-footer">
         {section ? (
-          <button className="icon-btn" title={`Back (${chordLabel(SETTINGS_CHORD)})`} aria-label="Back" onClick={closeSettings}>
+          <button className="side-footer-btn" title={`Back (${chordLabel(SETTINGS_CHORD)})`} onClick={closeSettings}>
             <ArrowLeft />
+            <span>Back</span>
           </button>
         ) : (
           <button className="icon-btn" title={`Settings (${chordLabel(SETTINGS_CHORD)})`} aria-label="Settings" onClick={() => openSettings()}>
