@@ -1,4 +1,5 @@
 mod error;
+mod fonts;
 mod fs;
 mod gh;
 mod git;
@@ -31,6 +32,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
         git::git_commit,
         gh::gh_pr_view,
         gh::gh_pr_create_web,
+        fonts::fonts_list,
         pty::pty_open,
         pty::pty_attach,
         pty::pty_write,

@@ -55,6 +55,7 @@ export const commands = {
 	ghPrView: () => typedError<PrLookup, Error>(__TAURI_INVOKE("gh_pr_view")),
 	/**  Opens GitHub's "create pull request" page for the current branch in the browser. */
 	ghPrCreateWeb: () => typedError<null, Error>(__TAURI_INVOKE("gh_pr_create_web")),
+	fontsList: () => typedError<FontFamily[], Error>(__TAURI_INVOKE("fonts_list")),
 	ptyOpen: (cwd: string | null, cols: number, rows: number) => typedError<TerminalInfo, Error>(__TAURI_INVOKE("pty_open", { cwd, cols, rows })),
 	/**
 	 *  Streams a session's output to `on_event`, starting with everything still in the ring.
@@ -84,6 +85,12 @@ export type Error = { kind: "noWorkspace" } | { kind: "invalidPath"; message: st
 export type FilePatch = {
 	path: string,
 	patch: string,
+};
+
+export type FontFamily = {
+	name: string,
+	/**  Some face of the family is fixed-width. */
+	mono: boolean,
 };
 
 export type FsBatch = {

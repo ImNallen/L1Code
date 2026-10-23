@@ -8,6 +8,7 @@ export type {
   ChangeKind,
   Check,
   FilePatch,
+  FontFamily,
   FsBatch,
   FsChange,
   GitFile,
