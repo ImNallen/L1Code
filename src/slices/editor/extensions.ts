@@ -28,9 +28,14 @@ import {
   rectangularSelection,
 } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
+import { settings } from "@/slices/settings";
 
 /** Holds the language for a state. Shared across states: compartments are identity keys. */
 export const languageSlot = new Compartment();
+/** Holds line wrapping, reconfigured on every open doc when the setting changes. */
+export const wrapSlot = new Compartment();
+
+export const lineWrapping = (on: boolean): Extension => (on ? EditorView.lineWrapping : []);
 
 const palette = {
   fg: "#d7dce4",
@@ -67,7 +72,7 @@ const highlight = HighlightStyle.define([
 
 const theme = EditorView.theme(
   {
-    "&": { height: "100%", color: palette.fg, backgroundColor: "var(--bg)", fontSize: "13px" },
+    "&": { height: "100%", color: palette.fg, backgroundColor: "var(--bg)", fontSize: "var(--editor-font-size)" },
     ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "1.55" },
     ".cm-content": { caretColor: "var(--accent)", padding: "6px 0" },
     ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent)", borderLeftWidth: "2px" },
@@ -114,6 +119,7 @@ export function baseExtensions(): Extension[] {
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap, ...foldKeymap, ...completionKeymap, indentWithTab]),
     theme,
     languageSlot.of([]),
+    wrapSlot.of(lineWrapping(settings.state.get().editorWordWrap)),
   ];
 }
 

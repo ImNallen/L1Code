@@ -18,7 +18,8 @@ import { createStore, useStore, watch, type ReadStore } from "@/core/store";
 import type { PersistSpec } from "@/core/slice";
 import { toast } from "@/core/toast";
 import { onFsBatch } from "@/core/workspace";
-import { baseExtensions, languageSlot, loadLanguage } from "./extensions";
+import { settings } from "@/slices/settings";
+import { baseExtensions, languageSlot, lineWrapping, loadLanguage, wrapSlot } from "./extensions";
 import { baselineOf, decideReconcile, isDirty, type Baseline, type DiskState, type ReconcileDecision } from "./reconcile";
 
 export interface Doc {
@@ -338,11 +339,19 @@ export function activate(): () => void {
   });
   const onFocus = () => void reconcileAll();
   window.addEventListener("focus", onFocus);
+  applyFontSize(settings.state.get().editorFontSize);
+  const offFont = watch(settings.state, (s) => s.editorFontSize, applyFontSize);
+  const offWrap = watch(settings.state, (s) => s.editorWordWrap, (on) => {
+    const effects = wrapSlot.reconfigure(lineWrapping(on));
+    for (const d of store.get().open) transact(d.path, { effects });
+  });
   const unlistenClose = getCurrentWindow().onCloseRequested(async (e) => {
     if (hasDirty() && !(await closeAllDocuments())) e.preventDefault();
   });
   return () => {
     offFs();
+    offFont();
+    offWrap();
     window.removeEventListener("focus", onFocus);
     void unlistenClose.then((u) => u());
   };
@@ -398,6 +407,12 @@ function transact(path: string, spec: TransactionSpec): void {
   }
   const doc = find(path);
   if (doc) patch(path, { state: doc.state.update(spec).state });
+}
+
+/** The theme reads the size from a CSS variable; the bound view must remeasure line heights. */
+function applyFontSize(px: number): void {
+  document.documentElement.style.setProperty("--editor-font-size", `${px}px`);
+  bound?.view.requestMeasure();
 }
 
 function show(path: string, opts: OpenOptions): void {
