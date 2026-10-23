@@ -30,7 +30,6 @@
   font-weight: 500;
 }
 
-/* System stacks the dark mockup over the light one and shows only its right half. */
 .mode-art {
   position: relative;
   display: block;
@@ -107,7 +106,6 @@
   gap: 12px;
 }
 
-/* The main button fills the card under the orbs, which take clicks only on the orbs themselves. */
 .theme-card {
   position: relative;
   padding: 14px 14px 44px;

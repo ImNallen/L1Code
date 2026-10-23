@@ -18,7 +18,6 @@
   box-sizing: border-box;
 }
 
-/* Set for one frame while the palette changes, so the UI switches colors without animating them. */
 .no-transitions *,
 .no-transitions *::before,
 .no-transitions *::after {

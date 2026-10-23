@@ -34,13 +34,11 @@ import { appearance, settings } from "@/slices/settings";
 export const languageSlot = new Compartment();
 /** Holds line wrapping, reconfigured on every open doc when the setting changes. */
 export const wrapSlot = new Compartment();
-/** Holds CodeMirror's light or dark base theme, reconfigured on every open doc when the scheme changes. */
 export const schemeSlot = new Compartment();
 
 export const lineWrapping = (on: boolean): Extension => (on ? EditorView.lineWrapping : []);
 export const schemeFlag = (scheme: "light" | "dark"): Extension => EditorView.darkTheme.of(scheme === "dark");
 
-/** Colors are CSS variables, so a theme switch repaints open and cached background states with no reconfigure. */
 const syntax = (name: string) => `var(--syntax-${name})`;
 
 const highlight = HighlightStyle.define([

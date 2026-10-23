@@ -278,7 +278,6 @@ function setFontSize(px: number) {
 export function activate(): () => void {
   let cancelled = false;
   const offFont = watch(settings.state, (s) => s.terminalFontSize, setFontSize);
-  // xterm paints its own canvas, so CSS variables never reach it; hidden terminals update too.
   const offTheme = watch(appearance.state, (p) => p.terminal, (theme) => {
     for (const e of entries.values()) e.term.options.theme = theme;
   });

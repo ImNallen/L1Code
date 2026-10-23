@@ -83,10 +83,6 @@ function Mockup({ p: { ui } }: { p: Palette }) {
   );
 }
 
-/**
- * The card is one big button under the orbs rather than a button around them, so no control nests
- * inside another. The card applies the theme to both schemes; an orb applies one variant.
- */
 function ThemeCard({ id, label, chosen }: { id: ThemeId; label: string; chosen: Readonly<Record<Scheme, ThemeId>> }) {
   return (
     <div className="theme-card" data-active={SCHEMES.some((s) => chosen[s] === id) || undefined}>

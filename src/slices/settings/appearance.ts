@@ -9,14 +9,11 @@ import { paletteCss, resolvePalette, type Palette } from "./palette";
 import { settingsState } from "./store";
 import type { Scheme } from "./themes";
 
-/** The `<style>` that holds the palette rule. index.html creates it from the cache before first paint. */
 export const STYLE_ID = "l1code-palette";
-/** The last painted palette rule. Derived output, so a stale value costs one frame before the repaint. */
 export const CACHE_KEY = "l1code.palette-css";
 
-/** The OS scheme from the media query. While the mode is fixed, `setTheme` forces it and nothing reads it. */
-const system = createStore<Scheme>("dark");
-const store = createStore<Palette>(resolvePalette(settingsState.get(), system.get()));
+const mediaScheme = createStore<Scheme>("dark");
+const store = createStore<Palette>(resolvePalette(settingsState.get(), mediaScheme.get()));
 export const paletteState: ReadStore<Palette> = store;
 
 let started = false;
@@ -27,11 +24,11 @@ export function startAppearance(): void {
   started = true;
   const media = matchMedia("(prefers-color-scheme: dark)");
   const scheme = (dark: boolean): Scheme => (dark ? "dark" : "light");
-  const recompute = () => store.set(resolvePalette(settingsState.get(), system.get()));
-  system.set(scheme(media.matches));
-  media.addEventListener("change", (e) => system.set(scheme(e.matches)));
+  const recompute = () => store.set(resolvePalette(settingsState.get(), mediaScheme.get()));
+  mediaScheme.set(scheme(media.matches));
+  media.addEventListener("change", (e) => mediaScheme.set(scheme(e.matches)));
   settingsState.subscribe(recompute);
-  system.subscribe(recompute);
+  mediaScheme.subscribe(recompute);
   recompute();
 
   const style = document.getElementById(STYLE_ID) ?? document.head.appendChild(Object.assign(document.createElement("style"), { id: STYLE_ID }));
@@ -50,7 +47,6 @@ export function startAppearance(): void {
   paint(store.get());
   watch(store, (p) => p, paint);
 
-  // Native chrome (traffic lights, menus) follows the mode. null hands it back to the OS.
   const syncWindow = (mode: AppearanceMode) => void getCurrentWindow().setTheme(mode === "system" ? null : mode).catch(() => {});
   syncWindow(settingsState.get().appearanceMode);
   watch(settingsState, (s) => s.appearanceMode, syncWindow);

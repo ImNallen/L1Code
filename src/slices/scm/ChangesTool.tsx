@@ -32,7 +32,6 @@ const diffStyle = createStore<DiffStyle>("unified");
 
 /** Let the code fill the panel: no reserved scrollbar gutter beside it. */
 const DIFF_CSS = `[data-code] { scrollbar-gutter: auto; }`;
-/** Both variants, picked by `light-dark()` from the app's color-scheme (see styles.css). */
 const DIFF_THEME = { light: "pierre-light", dark: "pierre-dark" };
 
 /** The last result, so a remounted tool shows it immediately instead of a spinner. */

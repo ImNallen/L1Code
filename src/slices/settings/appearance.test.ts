@@ -90,9 +90,8 @@ describe("stylesheets", () => {
   it("hold no color literals, so the palette is the only source of color", () => {
     for (const [file, css] of Object.entries(sheets)) {
       const literals = css.match(/#[0-9a-f]{3,8}\b|\b(rgba?|hsla?|oklch|oklab)\(/gi) ?? [];
-      // The preview iframe's white is the previewed page's own canvas, not app chrome.
-      const allowed = file.endsWith("/preview.css") ? ["#fff"] : [];
-      expect(literals.filter((l) => !allowed.includes(l)), file).toEqual([]);
+      const webPageWhite = file.endsWith("/preview.css") ? ["#fff"] : [];
+      expect(literals.filter((l) => !webPageWhite.includes(l)), file).toEqual([]);
     }
   });
 

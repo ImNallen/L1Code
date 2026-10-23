@@ -1,7 +1,6 @@
 // OKLab color math for compiling themes: parse seeds, mix, print sRGB hex, and measure contrast. Pure.
 
 export type Hex = `#${string}`;
-/** oklch lightness 0-1, chroma, hue in degrees: the seed format of the T3 theme table. */
 export type Oklch = readonly [l: number, c: number, h: number];
 export type Seed = Hex | Oklch;
 export type Lab = readonly [number, number, number];
@@ -27,10 +26,8 @@ export function lab(seed: Seed): Lab {
   ];
 }
 
-/** `t` of the way from `a` to `b` in OKLab, like `color-mix(in oklab, …)`. */
 export const mix = (a: Lab, b: Lab, t: number): Lab => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
-/** sRGB hex, clamped to gamut. An `alpha` below 1 appends an alpha byte, which CSS and xterm both read. */
 export function hex([L, A, B]: Lab, alpha = 1): Hex {
   const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
   const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
@@ -44,7 +41,6 @@ export function hex([L, A, B]: Lab, alpha = 1): Hex {
   return `#${bytes.map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, "0")).join("")}`;
 }
 
-/** A `#rrggbbaa` color painted over an opaque one, as the browser blends it. */
 export function over(top: Hex, under: Hex): Hex {
   const a = parseInt(top.slice(7, 9) || "ff", 16) / 255;
   const below = channels(under);
@@ -52,7 +48,6 @@ export function over(top: Hex, under: Hex): Hex {
   return `#${bytes.map((b) => b.toString(16).padStart(2, "0")).join("")}`;
 }
 
-/** WCAG 2 contrast ratio of two opaque colors. */
 export function contrast(a: Hex, b: Hex): number {
   const y = (h: Hex) => {
     const [r, g, bl] = channels(h).map(lin) as [number, number, number];
@@ -62,10 +57,6 @@ export function contrast(a: Hex, b: Hex): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/**
- * `c` with its OKLab lightness moved toward `target`'s by the least amount that reaches `floor` contrast on every
- * background, hue and chroma kept. `c` itself when it already passes.
- */
 export function legible(c: Lab, target: Lab, backgrounds: readonly Hex[], floor: number): Lab {
   const at = (t: number): Lab => [c[0] + (target[0] - c[0]) * t, c[1], c[2]];
   const passes = (t: number) => backgrounds.every((bg) => contrast(hex(at(t)), bg) >= floor);
@@ -81,7 +72,5 @@ export function legible(c: Lab, target: Lab, backgrounds: readonly Hex[], floor:
 
 export const WHITE = lab("#ffffff");
 export const BLACK = lab("#000000");
-/** Today's text on accent. */
 export const INK = lab("#0b1020");
-/** The theme card orb tint for dark variants (zinc-950). */
 export const ZINC = lab("#09090b");

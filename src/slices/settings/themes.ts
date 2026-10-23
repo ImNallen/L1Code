@@ -6,20 +6,16 @@ import type { UiColors } from "./palette";
 
 export type Scheme = "light" | "dark";
 
-/** T3 Code's theme seeds. canvas is --bg (editor, main area); sidebar is --bg-panel (side columns, terminal). */
+/** canvas is --bg (editor, main area); sidebar is --bg-panel (side columns, terminal). */
 export interface Seeds {
   readonly canvas: Seed;
   readonly sidebar: Seed;
   readonly text: Seed;
   readonly border: Seed;
-  /** Brand, focus, and selection. */
   readonly accent: Seed;
-  /** Primary buttons. Defaults to accent. */
   readonly action?: Seed;
-  /** Menus, popovers, and dialogs. Defaults to canvas. */
   readonly surface?: Seed;
-  /** Hand-tuned tokens that win over derivation. Only L1Code dark uses it, to keep today's look exact. */
-  readonly pin?: Partial<UiColors>;
+  readonly overrides?: Partial<UiColors>;
 }
 
 export interface ThemeDef {
@@ -35,7 +31,7 @@ const DT = [0.99, 0.008, 325.6] as const;
 export const themes = [
   { id: "l1code", label: "L1Code", variants: {
     light: { canvas: "#fbfbfc", sidebar: "#f2f3f5", text: "#1f2329", border: "#e1e4e8", accent: "#3b6fe0", surface: "#ffffff" },
-    dark: { canvas: "#0f1115", sidebar: "#13161b", text: "#d7dce4", border: "#232831", accent: "#7aa2ff", pin: {
+    dark: { canvas: "#0f1115", sidebar: "#13161b", text: "#d7dce4", border: "#232831", accent: "#7aa2ff", overrides: {
       bgElev: "#191d24", bgInput: "#0c0e12", bgHover: "#1e232b", bgActive: "#242b36", bgSelected: "#1f3150", borderStrong: "#2e3541",
       fgMuted: "#9aa3b2", fgSubtle: "#6b7383", fgFaint: "#20252e", sidebarFg: "#c3c9d4", accentStrong: "#9bb8ff", actionStrong: "#9bb8ff",
       editorSelection: "#2a3b5c", editorGutter: "#4b5261" } } } },
@@ -64,7 +60,6 @@ export type SyntaxColors = { readonly [K in SyntaxName]: Hex };
 
 type AnsiName = "black" | "red" | "green" | "yellow" | "blue" | "magenta" | "cyan" | "white";
 type Bright<N extends string> = `bright${Capitalize<N>}`;
-/** xterm's 16 ANSI colors, named as in its `ITheme`. */
 export type AnsiColors = { readonly [K in AnsiName | Bright<AnsiName>]: Hex };
 
 interface SchemeColors {
@@ -73,7 +68,6 @@ interface SchemeColors {
   readonly ansi: AnsiColors;
 }
 
-/** Dark is today's palette. Light follows GitHub light. */
 // prettier-ignore
 export const schemeColors: Readonly<Record<Scheme, SchemeColors>> = {
   dark: {

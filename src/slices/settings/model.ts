@@ -36,14 +36,11 @@ interface SettingBase {
 
 type ToggleDef = SettingBase & { readonly kind: "toggle"; readonly key: KeyOf<boolean> };
 type ChoiceDef = SettingBase & { readonly kind: "choice"; readonly key: KeyOf<number>; readonly options: readonly number[] };
-/** A string-union setting. Distributes over keys, so `options` is typed by its own key. */
 type PickDef = { [K in KeyOf<string>]: SettingBase & { readonly kind: "pick"; readonly key: K; readonly options: readonly Settings[K][] } }[KeyOf<string>];
 
 export type SettingDef = ToggleDef | ChoiceDef | PickDef;
-/** What a rows section can draw. A `pick` has no generic row control, so it lives only in a panel section. */
 export type RowDef = ToggleDef | ChoiceDef;
 
-/** Sections that render their own component instead of rows. SettingsPage maps each id to it. */
 export type PanelId = "appearance";
 
 type SectionDef = { readonly id: string; readonly title: string; readonly icon: LucideIcon } & (

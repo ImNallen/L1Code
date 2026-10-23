@@ -4,7 +4,6 @@
 import { BLACK, contrast, hex, INK, lab, legible, mix, over, WHITE, ZINC, type Hex, type Lab } from "./color";
 import { schemeColors, themes, type AnsiColors, type Scheme, type Seeds, type SyntaxColors, type ThemeId } from "./themes";
 
-/** Every app color token. Each key is a variable on `<html>` in kebab case: bgPanel is --bg-panel. */
 export interface UiColors {
   bg: Hex; bgPanel: Hex; bgElev: Hex; bgInput: Hex; bgHover: Hex; bgActive: Hex; bgSelected: Hex;
   border: Hex; borderStrong: Hex;
@@ -17,7 +16,6 @@ export interface UiColors {
   matchBg: Hex; matchLine: Hex; searchBg: Hex; searchLine: Hex; searchCurrent: Hex;
 }
 
-/** Structurally an xterm `ITheme`, so the terminal assigns it as is. */
 export type TerminalColors = AnsiColors & {
   readonly [K in "background" | "foreground" | "cursor" | "cursorAccent" | "selectionBackground"]: Hex;
 };
@@ -28,34 +26,32 @@ export interface Palette {
   readonly ui: Readonly<UiColors>;
   readonly syntax: SyntaxColors;
   readonly terminal: TerminalColors;
-  /** Theme card orb: canvas 20% toward white (light) or zinc-950 (dark), lit by the seed accent and a 45% action glow. */
   readonly orb: { readonly fill: Hex; readonly accent: Hex; readonly glow: Hex };
 }
+
+/** WCAG's floor for UI components and large text. The accent is drawn as both. */
+const MIN_ACCENT_CONTRAST = 3;
 
 export function compile(id: ThemeId, scheme: Scheme, seeds: Seeds): Palette {
   const dark = scheme === "dark";
   const fixed = schemeColors[scheme];
   const canvas = lab(seeds.canvas), sidebar = lab(seeds.sidebar), text = lab(seeds.text), border = lab(seeds.border);
-  const brand = lab(seeds.accent), action = lab(seeds.action ?? seeds.accent), surface = lab(seeds.surface ?? seeds.canvas);
+  const seedAccent = lab(seeds.accent), action = lab(seeds.action ?? seeds.accent), surface = lab(seeds.surface ?? seeds.canvas);
   const ok = lab(fixed.status.success), warn = lab(fixed.status.warning), bad = lab(fixed.status.danger), merged = lab(fixed.status.merged);
-  /** Hover, active, and selected rows sit on the side panels. */
-  const toward = (c: Lab, t: number) => hex(mix(sidebar, c, t));
+  const fromSidebar = (c: Lab, t: number) => hex(mix(sidebar, c, t));
   const bgElev = hex(dark ? mix(surface, text, 0.06) : mix(surface, WHITE, 0.6));
-  /** Tints use the seed, which sits farther from the text than a lifted accent, so text on them keeps more contrast. */
-  const bgSelected = toward(brand, dark ? 0.24 : 0.14), accentBg = hex(brand, 0.14);
-  /** The accent is also text (quick-open matches, active icons, chips), so it must read at 3:1 on every surface under it. */
-  const under = [hex(canvas), hex(sidebar), bgElev, bgSelected, over(accentBg, hex(canvas)), over(accentBg, hex(sidebar))];
-  const accent = legible(brand, text, under, 3);
+  const bgSelected = fromSidebar(seedAccent, dark ? 0.24 : 0.14), accentBg = hex(seedAccent, 0.14);
+  const accentBackdrops = [hex(canvas), hex(sidebar), bgElev, bgSelected, over(accentBg, hex(canvas)), over(accentBg, hex(sidebar))];
+  const accent = legible(seedAccent, text, accentBackdrops, MIN_ACCENT_CONTRAST);
   const ink = (on: Lab) => (contrast(hex(on), hex(INK)) >= contrast(hex(on), hex(WHITE)) ? hex(INK) : hex(WHITE));
-  /** Translucent overlays lighten in dark schemes and darken with the text color in light ones. */
   const veil = dark ? WHITE : text;
   const ui: UiColors = {
     bg: hex(canvas),
     bgPanel: hex(sidebar),
     bgElev,
     bgInput: hex(dark ? mix(canvas, INK, 0.25) : mix(canvas, WHITE, 0.7)),
-    bgHover: toward(text, dark ? 0.06 : 0.05),
-    bgActive: toward(text, dark ? 0.11 : 0.09),
+    bgHover: fromSidebar(text, dark ? 0.06 : 0.05),
+    bgActive: fromSidebar(text, dark ? 0.11 : 0.09),
     bgSelected,
     border: hex(border),
     borderStrong: hex(mix(border, text, dark ? 0.08 : 0.1)),
@@ -91,15 +87,15 @@ export function compile(id: ThemeId, scheme: Scheme, seeds: Seeds): Palette {
     shadowStrong: hex(BLACK, dark ? 0.5 : 0.18),
     backdrop: hex(BLACK, dark ? 0.5 : 0.25),
     backdropSoft: hex(BLACK, dark ? 0.25 : 0.1),
-    editorSelection: hex(mix(canvas, brand, dark ? 0.28 : 0.2)),
+    editorSelection: hex(mix(canvas, seedAccent, dark ? 0.28 : 0.2)),
     editorActiveLine: hex(veil, dark ? 0.03 : 0.035),
     editorGutter: hex(mix(text, canvas, 0.65)),
-    matchBg: hex(brand, 0.18),
-    matchLine: hex(brand, 0.4),
+    matchBg: hex(seedAccent, 0.18),
+    matchLine: hex(seedAccent, 0.4),
     searchBg: hex(warn, 0.25),
     searchLine: hex(warn, 0.5),
     searchCurrent: hex(warn, 0.45),
-    ...seeds.pin,
+    ...seeds.overrides,
   };
   return {
     id,
@@ -112,13 +108,12 @@ export function compile(id: ThemeId, scheme: Scheme, seeds: Seeds): Palette {
       foreground: ui.fg,
       cursor: ui.accent,
       cursorAccent: ui.bgPanel,
-      selectionBackground: hex(brand, 0.3),
+      selectionBackground: hex(seedAccent, 0.3),
     },
-    orb: { fill: hex(mix(canvas, dark ? ZINC : WHITE, 0.2)), accent: hex(brand), glow: hex(action, 0.45) },
+    orb: { fill: hex(mix(canvas, dark ? ZINC : WHITE, 0.2)), accent: hex(seedAccent), glow: hex(action, 0.45) },
   };
 }
 
-/** All twelve palettes, compiled once. Interned, so a store holding one changes identity only when the colors do. */
 export const palettes = Object.fromEntries(
   themes.map((t) => [t.id, { light: compile(t.id, "light", t.variants.light), dark: compile(t.id, "dark", t.variants.dark) }]),
 ) as { readonly [I in ThemeId]: Readonly<Record<Scheme, Palette>> };
