@@ -18,6 +18,10 @@
   --accent: #7aa2ff;
   --accent-strong: #9bb8ff;
   --accent-bg: rgba(122, 162, 255, 0.14);
+  --on-accent: #0b1020;
+  --action: #7aa2ff;
+  --action-strong: #9bb8ff;
+  --on-action: #0b1020;
   --success: #7ccf9b;
   --warning: #e5c07b;
   --danger: #f2777a;
@@ -25,6 +29,40 @@
   --modified: #e5c07b;
   --deleted: #f2777a;
   --untracked: #7ccf9b;
+  --success-bg: #7ccf9b26;
+  --warning-bg: #e5c07b1a;
+  --warning-line: #e5c07b4d;
+  --danger-bg: #f2777a1f;
+  --danger-line: #f2777a80;
+  --merged: #b89bff;
+  --merged-bg: #b89bff29;
+  --fg-faint: #20252e;
+  --sidebar-fg: #c3c9d4;
+  --scrollbar: #ffffff14;
+  --scrollbar-hover: #ffffff29;
+  --shadow: #00000073;
+  --shadow-strong: #00000080;
+  --backdrop: #00000080;
+  --backdrop-soft: #00000040;
+  --editor-selection: #2a3b5c;
+  --editor-active-line: #ffffff08;
+  --editor-gutter: #4b5261;
+  --match-bg: #7aa2ff2e;
+  --match-line: #7aa2ff66;
+  --search-bg: #e5c07b40;
+  --search-line: #e5c07b80;
+  --search-current: #e5c07b73;
+  --syntax-comment: #6b7383;
+  --syntax-keyword: #c792ea;
+  --syntax-string: #a5d6a7;
+  --syntax-number: #f78c6c;
+  --syntax-fn: #82aaff;
+  --syntax-type: #ffcb6b;
+  --syntax-prop: #89ddff;
+  --syntax-tag: #f07178;
+  --syntax-constant: #f78c6c;
+  --syntax-punct: #a9b1c1;
+  --syntax-invalid: #f2777a;
   --font-ui: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
   --text-xs: 11px;
@@ -67,13 +105,13 @@ button {
   height: 10px;
 }
 :not(.native-scroll)::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--scrollbar);
   border-radius: 10px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 :not(.native-scroll)::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--scrollbar-hover);
   background-clip: padding-box;
 }
 :not(.native-scroll)::-webkit-scrollbar-corner {
@@ -135,13 +173,13 @@ button {
   cursor: default;
 }
 .btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #0b1020;
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--on-action);
   font-weight: 600;
 }
 .btn.primary:hover {
-  background: var(--accent-strong);
+  background: var(--action-strong);
 }
 
 .icon-btn {
@@ -269,7 +307,7 @@ textarea.input {
   background: var(--bg-elev);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 30px var(--shadow);
   font-family: var(--font-ui);
   font-size: var(--text-sm);
 }

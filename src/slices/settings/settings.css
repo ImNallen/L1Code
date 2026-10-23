@@ -96,7 +96,7 @@
 }
 .switch[aria-checked="true"] .switch-thumb {
   transform: translateX(14px);
-  background: #0b1020;
+  background: var(--on-accent);
 }
 
 .settings-select {

@@ -93,7 +93,7 @@
   margin: 8px 10px 0;
   padding: 6px 8px;
   border-radius: var(--radius-sm);
-  background: rgba(242, 119, 122, 0.1);
+  background: var(--danger-bg);
   color: var(--danger);
   font-size: var(--text-sm);
 }
