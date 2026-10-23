@@ -7,7 +7,7 @@ import { useStore } from "@/core/store";
 import { workspaceState } from "@/core/workspace";
 import { terminal } from "@/slices/terminal";
 import { editor } from "@/slices/editor";
-import { explorerFilter, explorerState, firstMatch, load, remove, setFilter, startCreate, startRename, treeModel } from "./tree";
+import { directoryFor, explorerFilter, explorerState, firstMatch, load, remove, setFilter, startCreate, startRename, treeModel } from "./tree";
 import "./explorer.css";
 
 export default function ExplorerView() {
@@ -32,7 +32,7 @@ export default function ExplorerView() {
   const root = ws.status === "open" ? ws.info.root : "";
 
   const renderContextMenu: FileTreeProps["renderContextMenu"] = (item, ctx) => {
-    const dir = item.kind === "directory" ? item.path : item.path.includes("/") ? item.path.slice(0, item.path.lastIndexOf("/")) : null;
+    const dir = directoryFor(item.path);
     const run = (fn: () => void) => () => {
       ctx.close({ restoreFocus: false });
       fn();
@@ -40,11 +40,11 @@ export default function ExplorerView() {
     const rel = item.path.replace(/\/$/, "");
     return (
       <div className="ctx-menu" data-file-tree-context-menu-root="true">
-        <button onClick={run(() => startCreate(dir, false))}>New File…</button>
-        <button onClick={run(() => startCreate(dir, true))}>New Folder…</button>
+        <button onClick={run(() => startCreate({ kind: "item", path: item.path }, false))}>Add File…</button>
+        <button onClick={run(() => startCreate({ kind: "item", path: item.path }, true))}>Add Folder…</button>
         <hr />
         <button onClick={run(() => startRename(item.path))}>Rename…</button>
-        <button onClick={run(() => void remove(item.path))}>Move to Trash</button>
+        <button onClick={run(() => void remove(item.path))}>Delete</button>
         <hr />
         <button onClick={run(() => void navigator.clipboard.writeText(rel))}>Copy Relative Path</button>
         <button onClick={run(() => void navigator.clipboard.writeText(`${root}/${rel}`))}>Copy Path</button>
@@ -85,10 +85,10 @@ export default function ExplorerView() {
             </button>
           )}
         </div>
-        <button className="icon-btn" title="Add folder" aria-label="Add folder" onClick={() => startCreate(null, true)}>
+        <button className="icon-btn" title="Add folder" aria-label="Add folder" onClick={() => startCreate({ kind: "selection" }, true)}>
           <FolderPlus />
         </button>
-        <button className="icon-btn" title="Add file" aria-label="Add file" onClick={() => startCreate(null, false)}>
+        <button className="icon-btn" title="Add file" aria-label="Add file" onClick={() => startCreate({ kind: "selection" }, false)}>
           <FilePlus />
         </button>
       </div>

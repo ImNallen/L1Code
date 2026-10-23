@@ -15,6 +15,8 @@ export interface ExplorerState {
   readonly fileCount: number;
 }
 
+export type CreateTarget = { kind: "selection" } | { kind: "item"; path: string };
+
 const store = createStore<ExplorerState>({ status: "idle", gen: 0, fileCount: 0 });
 export const explorerState: ReadStore<ExplorerState> = store;
 
@@ -22,7 +24,6 @@ export const explorerState: ReadStore<ExplorerState> = store;
 let paths = new Set<string>();
 let files: string[] = [];
 let model: FileTree | null = null;
-/** A row added by "New File/Folder" that becomes real only when its rename is confirmed. */
 let pendingNew: { path: string; dir: boolean } | null = null;
 
 /** The filter typed above the tree. The model hides every row that doesn't match it. */
@@ -161,9 +162,21 @@ export function reveal(path: string): void {
   model.scrollToPath(path, { focus: false, offset: "nearest" });
 }
 
-/** Adds a placeholder row under `parent` and starts renaming it. Confirming creates it on disk. */
-export function startCreate(parent: string | null, dir: boolean): void {
+export function directoryFor(path: string): string | null {
+  const item = model?.getItem(path);
+  if (!item) return null;
+  const canonical = item.getPath();
+  if (item.isDirectory()) return canonical;
+  return canonical.slice(0, canonical.lastIndexOf("/") + 1) || null;
+}
+
+/** Adds a placeholder row at `target` and starts renaming it. Confirming creates it on disk. */
+export function startCreate(target: CreateTarget, dir: boolean): void {
   if (!model) return;
+  if (target.kind === "item" && !model.getItem(target.path)) return;
+  const candidates = target.kind === "selection" ? model.getSelectedPaths() : [target.path];
+  const anchor = candidates.length === 1 ? candidates[0] : undefined;
+  const parent = anchor ? directoryFor(anchor) : null;
   const base = parent ? stripSlash(parent) + "/" : "";
   let name = dir ? "new-folder" : "untitled";
   for (let i = 2; paths.has(base + name) || paths.has(base + name + "/"); i++) name = `${dir ? "new-folder" : "untitled"}-${i}`;
