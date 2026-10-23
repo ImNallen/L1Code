@@ -1,13 +1,9 @@
 /* Global tokens and the few shared primitives every slice uses. Slice-specific CSS lives next to
-   the slice in a `*.css` file imported by its component. Colors are not here: the settings slice
-   writes them, with `color-scheme`, as variables on :root from the active theme's palette. */
+   the slice in a `*.css` file imported by its component. Colors and font tokens (families and the
+   `--text-*` scale) are not here: the settings slice writes them as variables on :root from the
+   active palette and the font settings. */
 
 :root {
-  --font-ui: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-md: 13px;
   --radius: 6px;
   --radius-sm: 4px;
   --titlebar-h: 44px;
@@ -53,6 +49,8 @@ file-tree-container {
 diffs-container {
   --diffs-light-bg: var(--bg);
   --diffs-dark-bg: var(--bg);
+  --diffs-font-family: var(--font-mono);
+  --diffs-header-font-family: var(--font-ui);
 }
 
 /* Custom scrollbars take layout space in WebKit. `.native-scroll` opts out to get the platform's

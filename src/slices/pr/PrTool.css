@@ -52,7 +52,7 @@
 }
 .pr-title {
   color: var(--fg);
-  font-size: 14px;
+  font-size: calc(var(--text-md) + 1px);
   font-weight: 600;
   line-height: 1.4;
   text-decoration: none;

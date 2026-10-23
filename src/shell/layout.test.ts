@@ -10,11 +10,11 @@ describe("settings route", () => {
   it("opens at the first section, then at the section shown last", () => {
     openSettings();
     expect(layout.get().settings).toBe("appearance");
-    openSettings("terminal");
+    openSettings("editor");
     closeSettings();
     expect(layout.get().settings).toBeNull();
     openSettings();
-    expect(layout.get().settings).toBe("terminal");
+    expect(layout.get().settings).toBe("editor");
   });
 
   it("toggles between settings and the workbench", () => {

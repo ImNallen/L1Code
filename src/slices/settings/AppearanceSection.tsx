@@ -1,8 +1,9 @@
-// The Appearance panel: color scheme buttons and theme cards. The artwork reads the compiled palettes,
-// so each mockup and orb shows that theme's real colors whatever theme is showing.
+// The Appearance panel: color scheme buttons, theme cards, and fonts. The artwork reads the compiled
+// palettes, so each mockup and orb shows that theme's real colors whatever theme is showing.
 
 import type { KeyboardEvent } from "react";
 import { Moon, Sun } from "lucide-react";
+import FontSettings from "./FontSettings";
 import { appearanceModes, type AppearanceMode } from "./model";
 import { palettes, type Palette } from "./palette";
 import { setSetting, useSetting } from "./store";
@@ -60,6 +61,8 @@ export default function AppearanceSection() {
           <ThemeCard key={t.id} id={t.id} label={t.label} chosen={chosen} />
         ))}
       </div>
+      <h2 className="settings-subhead">Fonts</h2>
+      <FontSettings />
     </>
   );
 }
