@@ -32,6 +32,7 @@ const diffStyle = createStore<DiffStyle>("unified");
 
 /** Let the code fill the panel: no reserved scrollbar gutter beside it. */
 const DIFF_CSS = `[data-code] { scrollbar-gutter: auto; }`;
+const DIFF_THEME = { light: "pierre-light", dark: "pierre-dark" };
 
 /** The last result, so a remounted tool shows it immediately instead of a spinner. */
 let cached: DiffSet | null = null;
@@ -117,7 +118,7 @@ export default function ChangesTool() {
   }, [focus, data, items, loading, limit]);
 
   const options = useMemo<FileDiffOptions<undefined, undefined>>(
-    () => ({ theme: "pierre-dark", themeType: "dark", diffStyle: style, overflow: "scroll", disableFileHeader: true, unsafeCSS: DIFF_CSS }),
+    () => ({ theme: DIFF_THEME, themeType: "system", diffStyle: style, overflow: "scroll", disableFileHeader: true, unsafeCSS: DIFF_CSS }),
     [style],
   );
 

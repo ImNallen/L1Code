@@ -96,7 +96,7 @@
   text-transform: capitalize;
 }
 .pr-open {
-  background: rgba(124, 207, 155, 0.15);
+  background: var(--success-bg);
   color: var(--success);
 }
 .pr-draft {
@@ -104,11 +104,11 @@
   color: var(--fg-muted);
 }
 .pr-merged {
-  background: rgba(176, 140, 255, 0.16);
-  color: #b89bff;
+  background: var(--merged-bg);
+  color: var(--merged);
 }
 .pr-closed {
-  background: rgba(242, 119, 122, 0.14);
+  background: var(--danger-bg);
   color: var(--danger);
 }
 

@@ -45,7 +45,7 @@ Use `defineLeftView({...})` and add the slice to `left: [...]` in the manifest. 
    { kind: "toggle", key: "editorMinimap", label: "Minimap", description: "Show a map of the file beside the scrollbar." },
    ```
 
-   A `toggle` takes a boolean key and a `choice` takes a number key with `options`. The page row, its control, and the validation of the stored value all derive from that entry.
+   A `toggle` takes a boolean key and a `choice` takes a number key with `options`. The page row, its control, and the validation of the stored value all derive from that entry. A `pick` takes a string-union key with `options`. It has no row control, so it belongs to a section with a `panel`, which renders its own component, like Appearance.
 3. Read the value where it applies. Watch it from the consuming slice's `activate()` and return the unsubscribe with its other cleanups:
 
    ```ts
@@ -56,6 +56,24 @@ Use `defineLeftView({...})` and add the slice to `left: [...]` in the manifest. 
    ```
 
 Settings are app-wide and live under `l1code.settings` in localStorage, not in the per-workspace session.
+
+### Color a surface
+
+Colors come from the active theme's palette. The settings slice writes it to `<html>` as CSS variables, with `color-scheme`, and repaints when the scheme or theme changes.
+
+- In CSS, use a token such as `var(--bg-panel)` or `var(--danger-bg)`. A test in `src/slices/settings/appearance.test.ts` fails on a color literal in any stylesheet and on a `var()` that nothing declares.
+- To add a token, add a key to `UiColors` in `src/slices/settings/palette.ts` and derive it in `compile`. The key `fooBar` becomes `--foo-bar` in every theme.
+- For a surface that paints outside CSS, read `appearance.state` and watch it, as the terminal does for xterm:
+
+  ```ts
+  import { appearance } from "@/slices/settings";
+
+  const off = watch(appearance.state, (p) => p.terminal, (theme) => (term.options.theme = theme));
+  ```
+
+### Add a theme
+
+Add an entry to `themes` in `src/slices/settings/themes.ts` with a light and a dark variant, each with six seeds. The theme card, the setting's options, and both compiled palettes derive from it, and the contrast tests cover the new variants.
 
 ### Open and save a file
 

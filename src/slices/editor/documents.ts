@@ -18,8 +18,8 @@ import { createStore, useStore, watch, type ReadStore } from "@/core/store";
 import type { PersistSpec } from "@/core/slice";
 import { toast } from "@/core/toast";
 import { onFsBatch } from "@/core/workspace";
-import { settings } from "@/slices/settings";
-import { baseExtensions, languageSlot, lineWrapping, loadLanguage, wrapSlot } from "./extensions";
+import { appearance, settings } from "@/slices/settings";
+import { baseExtensions, languageSlot, lineWrapping, loadLanguage, schemeFlag, schemeSlot, wrapSlot } from "./extensions";
 import { baselineOf, decideReconcile, isDirty, type Baseline, type DiskState, type ReconcileDecision } from "./reconcile";
 
 export interface Doc {
@@ -345,6 +345,10 @@ export function activate(): () => void {
     const effects = wrapSlot.reconfigure(lineWrapping(on));
     for (const d of store.get().open) transact(d.path, { effects });
   });
+  const offScheme = watch(appearance.state, (p) => p.scheme, (scheme) => {
+    const effects = schemeSlot.reconfigure(schemeFlag(scheme));
+    for (const d of store.get().open) transact(d.path, { effects });
+  });
   const unlistenClose = getCurrentWindow().onCloseRequested(async (e) => {
     if (hasDirty() && !(await closeAllDocuments())) e.preventDefault();
   });
@@ -352,6 +356,7 @@ export function activate(): () => void {
     offFs();
     offFont();
     offWrap();
+    offScheme();
     window.removeEventListener("focus", onFocus);
     void unlistenClose.then((u) => u());
   };

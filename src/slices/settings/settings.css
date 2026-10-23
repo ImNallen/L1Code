@@ -35,6 +35,16 @@
   font-weight: 600;
 }
 
+.settings-subhead {
+  margin: 24px 0 10px;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.settings-column h1 + .settings-subhead {
+  margin-top: 4px;
+}
+
 .settings-card {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -96,7 +106,7 @@
 }
 .switch[aria-checked="true"] .switch-thumb {
   transform: translateX(14px);
-  background: #0b1020;
+  background: var(--on-accent);
 }
 
 .settings-select {

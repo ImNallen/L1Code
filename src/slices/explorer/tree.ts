@@ -222,7 +222,6 @@ export async function load(): Promise<void> {
         onRename: (e) => void commitRename(e.sourcePath, e.destinationPath, e.isFolder),
         onError: (msg) => toast(msg, "error"),
       },
-      unsafeCSS: TREE_CSS,
     });
     if (searchQuery()) {
       filterSession = { expanded: [rootPath], selected: [] };
@@ -500,5 +499,3 @@ function resetProjection(expanded: readonly string[]): void {
 function stripSlash(p: string) {
   return p.endsWith("/") ? p.slice(0, -1) : p;
 }
-
-const TREE_CSS = `:host { color-scheme: dark; }`;

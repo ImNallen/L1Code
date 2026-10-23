@@ -1,10 +1,14 @@
-// One settings section: a heading and a card of rows, each a label, a description, and its control.
+// One settings section: a heading, then the section's own panel or a card of rows, each a label, a
+// description, and its control.
 
-import { useId } from "react";
+import { createElement, useId, type ComponentType } from "react";
 import { ChevronDown } from "lucide-react";
-import { settingsSections, type SettingDef, type SettingsSectionId } from "./model";
+import AppearanceSection from "./AppearanceSection";
+import { settingsSections, type PanelId, type RowDef, type SettingsSectionId } from "./model";
 import { setSetting, useSetting } from "./store";
 import "./settings.css";
+
+const panels: Record<PanelId, ComponentType> = { appearance: AppearanceSection };
 
 export default function SettingsPage({ section }: { section: SettingsSectionId }) {
   const def = settingsSections.find((s) => s.id === section)!;
@@ -16,18 +20,22 @@ export default function SettingsPage({ section }: { section: SettingsSectionId }
       <div className="settings-scroll">
         <section className="settings-column" aria-labelledby="settings-heading">
           <h1 id="settings-heading">{def.title}</h1>
-          <div className="settings-card">
-            {def.settings.map((s) => (
-              <SettingRow key={s.key} def={s} />
-            ))}
-          </div>
+          {def.panel ? (
+            createElement(panels[def.panel])
+          ) : (
+            <div className="settings-card">
+              {def.settings.map((s) => (
+                <SettingRow key={s.key} def={s} />
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </div>
   );
 }
 
-function SettingRow({ def }: { def: SettingDef }) {
+function SettingRow({ def }: { def: RowDef }) {
   const id = useId();
   return (
     <div className="settings-row">
@@ -42,7 +50,7 @@ function SettingRow({ def }: { def: SettingDef }) {
   );
 }
 
-function Toggle({ def, id }: { def: Extract<SettingDef, { kind: "toggle" }>; id: string }) {
+function Toggle({ def, id }: { def: Extract<RowDef, { kind: "toggle" }>; id: string }) {
   const on = useSetting(def.key);
   return (
     <button
@@ -60,7 +68,7 @@ function Toggle({ def, id }: { def: Extract<SettingDef, { kind: "toggle" }>; id:
   );
 }
 
-function Choice({ def, id }: { def: Extract<SettingDef, { kind: "choice" }>; id: string }) {
+function Choice({ def, id }: { def: Extract<RowDef, { kind: "choice" }>; id: string }) {
   const value = useSetting(def.key);
   return (
     <div className="settings-select">

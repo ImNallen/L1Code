@@ -1,16 +1,27 @@
 // The settings registry and the decode boundary for stored values. Each setting is one row in a
-// section; the page, the section ids, and validation all derive from this table.
+// section, or belongs to a section that draws its own panel; the page, the section ids, and
+// validation all derive from this table.
 
 import type { LucideIcon } from "lucide-react";
-import { SquareCode, SquareTerminal } from "lucide-react";
+import { Palette, SquareCode, SquareTerminal } from "lucide-react";
+import { themeIds, type ThemeId } from "./themes";
+
+export const appearanceModes = ["system", "light", "dark"] as const;
+export type AppearanceMode = (typeof appearanceModes)[number];
 
 export interface Settings {
+  readonly appearanceMode: AppearanceMode;
+  readonly lightTheme: ThemeId;
+  readonly darkTheme: ThemeId;
   readonly editorFontSize: number;
   readonly editorWordWrap: boolean;
   readonly terminalFontSize: number;
 }
 
 export const defaultSettings: Settings = {
+  appearanceMode: "system",
+  lightTheme: "l1code",
+  darkTheme: "l1code",
   editorFontSize: 13,
   editorWordWrap: false,
   terminalFontSize: 12.5,
@@ -23,18 +34,32 @@ interface SettingBase {
   readonly description: string;
 }
 
-export type SettingDef =
-  | (SettingBase & { readonly kind: "toggle"; readonly key: KeyOf<boolean> })
-  | (SettingBase & { readonly kind: "choice"; readonly key: KeyOf<number>; readonly options: readonly number[] });
+type ToggleDef = SettingBase & { readonly kind: "toggle"; readonly key: KeyOf<boolean> };
+type ChoiceDef = SettingBase & { readonly kind: "choice"; readonly key: KeyOf<number>; readonly options: readonly number[] };
+type PickDef = { [K in KeyOf<string>]: SettingBase & { readonly kind: "pick"; readonly key: K; readonly options: readonly Settings[K][] } }[KeyOf<string>];
 
-interface SectionDef {
-  readonly id: string;
-  readonly title: string;
-  readonly icon: LucideIcon;
-  readonly settings: readonly SettingDef[];
-}
+export type SettingDef = ToggleDef | ChoiceDef | PickDef;
+export type RowDef = ToggleDef | ChoiceDef;
+
+export type PanelId = "appearance";
+
+type SectionDef = { readonly id: string; readonly title: string; readonly icon: LucideIcon } & (
+  | { readonly panel?: undefined; readonly settings: readonly RowDef[] }
+  | { readonly panel: PanelId; readonly settings: readonly SettingDef[] }
+);
 
 const sections = [
+  {
+    id: "appearance",
+    title: "Appearance",
+    icon: Palette,
+    panel: "appearance",
+    settings: [
+      { kind: "pick", key: "appearanceMode", label: "Color scheme", description: "Follow the system, or stay light or dark.", options: appearanceModes },
+      { kind: "pick", key: "lightTheme", label: "Light theme", description: "The theme in light mode.", options: themeIds },
+      { kind: "pick", key: "darkTheme", label: "Dark theme", description: "The theme in dark mode.", options: themeIds },
+    ],
+  },
   {
     id: "editor",
     title: "Editor",
@@ -73,7 +98,7 @@ export const settingsSections: readonly SettingsSection[] = sections;
 const defs: readonly SettingDef[] = settingsSections.flatMap((s) => s.settings);
 
 function accepts(def: SettingDef, v: unknown): boolean {
-  return def.kind === "toggle" ? typeof v === "boolean" : typeof v === "number" && def.options.includes(v);
+  return def.kind === "toggle" ? typeof v === "boolean" : (def.options as readonly unknown[]).includes(v);
 }
 
 /** Stored JSON to settings. Each key falls back to its default on its own, so one bad value can't reset the rest. */

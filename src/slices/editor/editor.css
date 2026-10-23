@@ -126,8 +126,8 @@
   gap: 8px;
   padding: 6px 10px 6px 14px;
   flex-shrink: 0;
-  background: rgba(229, 192, 123, 0.1);
-  border-bottom: 1px solid rgba(229, 192, 123, 0.3);
+  background: var(--warning-bg);
+  border-bottom: 1px solid var(--warning-line);
   color: var(--warning);
   font-size: var(--text-sm);
 }
@@ -148,7 +148,7 @@
   font-family: var(--font-mono);
   font-size: 64px;
   font-weight: 700;
-  color: #20252e;
+  color: var(--fg-faint);
   letter-spacing: -0.04em;
 }
 .editor-empty dl {
@@ -174,7 +174,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--backdrop);
 }
 .modal {
   display: flex;
@@ -182,7 +182,7 @@
   background: var(--bg-panel);
   border: 1px solid var(--border-strong);
   border-radius: 10px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--shadow-strong);
   overflow: hidden;
 }
 .modal.compare {

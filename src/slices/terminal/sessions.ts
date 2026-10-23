@@ -2,7 +2,7 @@
 // output ring; each xterm here is created once per session, survives the tool being hidden, and is
 // re-parented into whichever surface mounts. A window reload re-attaches from the ring.
 
-import { Terminal, type ILink, type ITheme } from "@xterm/xterm";
+import { Terminal, type ILink } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
@@ -13,7 +13,7 @@ import { toast } from "@/core/toast";
 import { currentRoot } from "@/core/workspace";
 import { editor } from "@/slices/editor";
 import { preview } from "@/slices/preview";
-import { settings } from "@/slices/settings";
+import { appearance, settings } from "@/slices/settings";
 
 export interface TerminalSession {
   readonly id: number;
@@ -46,30 +46,6 @@ interface Entry {
 
 const entries = new Map<number, Entry>();
 const isMac = navigator.platform.toLowerCase().includes("mac");
-
-const THEME: ITheme = {
-  background: "#13161b",
-  foreground: "#d7dce4",
-  cursor: "#7aa2ff",
-  cursorAccent: "#13161b",
-  selectionBackground: "rgba(122, 162, 255, 0.3)",
-  black: "#1e232b",
-  red: "#f2777a",
-  green: "#7ccf9b",
-  yellow: "#e5c07b",
-  blue: "#7aa2ff",
-  magenta: "#c792ea",
-  cyan: "#6cc4d8",
-  white: "#d7dce4",
-  brightBlack: "#6b7383",
-  brightRed: "#ff8f91",
-  brightGreen: "#98e0b2",
-  brightYellow: "#f0d398",
-  brightBlue: "#9bb8ff",
-  brightMagenta: "#dbaaf5",
-  brightCyan: "#8ad8ea",
-  brightWhite: "#ffffff",
-};
 
 function monoFont(): string {
   const css = getComputedStyle(document.documentElement).getPropertyValue("--font-mono").trim();
@@ -151,7 +127,7 @@ function createEntry(info: TerminalInfo): Entry {
     cursorBlink: true,
     scrollback: 10_000,
     macOptionIsMeta: true,
-    theme: THEME,
+    theme: appearance.state.get().terminal,
   });
   const fit = new FitAddon();
   term.loadAddon(fit);
@@ -302,6 +278,9 @@ function setFontSize(px: number) {
 export function activate(): () => void {
   let cancelled = false;
   const offFont = watch(settings.state, (s) => s.terminalFontSize, setFontSize);
+  const offTheme = watch(appearance.state, (p) => p.terminal, (theme) => {
+    for (const e of entries.values()) e.term.options.theme = theme;
+  });
   const before = new Set(entries.keys());
   void (async () => {
     try {
@@ -328,6 +307,7 @@ export function activate(): () => void {
   return () => {
     cancelled = true;
     offFont();
+    offTheme();
     for (const id of [...entries.keys()]) dispose(id);
     autoOpened = false;
     store.set({ sessions: [], active: null, ready: false });

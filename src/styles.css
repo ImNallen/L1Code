@@ -1,30 +1,8 @@
 /* Global tokens and the few shared primitives every slice uses. Slice-specific CSS lives next to
-   the slice in a `*.css` file imported by its component. */
+   the slice in a `*.css` file imported by its component. Colors are not here: the settings slice
+   writes them, with `color-scheme`, as variables on :root from the active theme's palette. */
 
 :root {
-  color-scheme: dark;
-  --bg: #0f1115;
-  --bg-panel: #13161b;
-  --bg-elev: #191d24;
-  --bg-input: #0c0e12;
-  --bg-hover: #1e232b;
-  --bg-active: #242b36;
-  --bg-selected: #1f3150;
-  --border: #232831;
-  --border-strong: #2e3541;
-  --fg: #d7dce4;
-  --fg-muted: #9aa3b2;
-  --fg-subtle: #6b7383;
-  --accent: #7aa2ff;
-  --accent-strong: #9bb8ff;
-  --accent-bg: rgba(122, 162, 255, 0.14);
-  --success: #7ccf9b;
-  --warning: #e5c07b;
-  --danger: #f2777a;
-  --added: #7ccf9b;
-  --modified: #e5c07b;
-  --deleted: #f2777a;
-  --untracked: #7ccf9b;
   --font-ui: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
   --text-xs: 11px;
@@ -38,6 +16,12 @@
 
 * {
   box-sizing: border-box;
+}
+
+.no-transitions *,
+.no-transitions *::before,
+.no-transitions *::after {
+  transition: none !important;
 }
 
 html,
@@ -60,6 +44,17 @@ button {
   color: inherit;
 }
 
+/* @pierre/diffs and @pierre/trees declare `color-scheme: light dark` on their hosts, which follows the
+   OS. Inheriting the app's scheme makes their light-dark() colors follow the theme instead. */
+diffs-container,
+file-tree-container {
+  color-scheme: inherit;
+}
+diffs-container {
+  --diffs-light-bg: var(--bg);
+  --diffs-dark-bg: var(--bg);
+}
+
 /* Custom scrollbars take layout space in WebKit. `.native-scroll` opts out to get the platform's
    overlay scrollbars, for surfaces whose content should reach the edge. */
 :not(.native-scroll)::-webkit-scrollbar {
@@ -67,13 +62,13 @@ button {
   height: 10px;
 }
 :not(.native-scroll)::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--scrollbar);
   border-radius: 10px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 :not(.native-scroll)::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--scrollbar-hover);
   background-clip: padding-box;
 }
 :not(.native-scroll)::-webkit-scrollbar-corner {
@@ -135,13 +130,13 @@ button {
   cursor: default;
 }
 .btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #0b1020;
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--on-action);
   font-weight: 600;
 }
 .btn.primary:hover {
-  background: var(--accent-strong);
+  background: var(--action-strong);
 }
 
 .icon-btn {
@@ -269,7 +264,7 @@ textarea.input {
   background: var(--bg-elev);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 30px var(--shadow);
   font-family: var(--font-ui);
   font-size: var(--text-sm);
 }
