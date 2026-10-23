@@ -1,9 +1,10 @@
-// Owns which right tool is showing, column visibility, and column sizes.
+// Owns which right tool is showing, column visibility, column sizes, and whether settings replace the workbench.
 // Valid ids come from the manifest, so a stale id from an older session falls back to the default.
 
 import type { PersistSpec } from "@/core/slice";
 import { createStore, watch, type ReadStore } from "@/core/store";
 import { manifest, type LeftViewId, type RightToolId } from "@/slices/manifest";
+import { settingsSections, type SettingsSectionId } from "@/slices/settings";
 
 export interface LayoutState {
   readonly right: RightToolId;
@@ -16,6 +17,8 @@ export interface LayoutState {
   readonly visited: readonly RightToolId[];
   /** Right tools the user closed. Revealing a tool reopens it. */
   readonly closed: readonly RightToolId[];
+  /** The settings section shown in place of the left views and the editor, or null for the workbench. */
+  readonly settings: SettingsSectionId | null;
 }
 
 const leftIds = manifest.left.map((v) => v.id) as LeftViewId[];
@@ -30,6 +33,7 @@ const store = createStore<LayoutState>({
   rightWidth: 460,
   visited: [],
   closed: [],
+  settings: null,
 });
 export const layout: ReadStore<LayoutState> = store;
 
@@ -48,10 +52,29 @@ export function closeTool(id: RightToolId): void {
   store.update((s) => (s.closed.includes(id) ? s : { ...s, closed: [...s.closed, id], visited: s.visited.filter((v) => v !== id) }));
 }
 
-/** Show a left view or right tool by id. Unknown ids are ignored. */
+let lastSection: SettingsSectionId = settingsSections[0]!.id;
+
+/** Shows settings at `section`, or at the section shown last. */
+export function openSettings(section: SettingsSectionId = lastSection): void {
+  lastSection = section;
+  store.update((s) => (s.settings === section ? s : { ...s, settings: section }));
+}
+
+export function closeSettings(): void {
+  store.update((s) => (s.settings === null ? s : { ...s, settings: null }));
+}
+
+export function toggleSettings(): void {
+  if (store.get().settings) closeSettings();
+  else openSettings();
+}
+
+/** Show a left view or right tool by id. Unknown ids are ignored. A left view replaces settings. */
 export function revealView(id: string): void {
-  if ((leftIds as string[]).includes(id)) setColumnOpen("left", true);
-  else if ((rightIds as string[]).includes(id)) showRight(id as RightToolId);
+  if ((leftIds as string[]).includes(id)) {
+    closeSettings();
+    setColumnOpen("left", true);
+  } else if ((rightIds as string[]).includes(id)) showRight(id as RightToolId);
 }
 
 /** A right tool's shortcut toggles it: shows it, or hides the column if it is already showing. */

@@ -1,28 +1,45 @@
 // The window: three resizable columns, overlays, and toasts. There is no title bar. The top row of
 // each column is the drag region, and the left one leaves room for the macOS traffic lights.
+// Settings swap the left views for a section list and the editor for the section's page. Both stay
+// mounted underneath, so the tree, the EditorView, and its scroll survive the round trip.
 
 import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Group, Panel, Separator, type PanelImperativeHandle } from "react-resizable-panels";
-import { PanelLeft, PanelRight, Plus, X } from "lucide-react";
+import { ArrowLeft, PanelLeft, PanelRight, Plus, Settings, X } from "lucide-react";
 import { chordLabel, matchesChord } from "@/core/keys";
 import { onReveal, reveal } from "@/core/reveal";
 import { allExtras, type Command, type LeftView, type RightTool } from "@/core/slice";
-import { useStore } from "@/core/store";
+import { useStore, watch } from "@/core/store";
 import { dismissToast, toasts } from "@/core/toast";
 import { workspaceState } from "@/core/workspace";
+import { editor } from "@/slices/editor";
 import { manifest, type RightToolId } from "@/slices/manifest";
+import { SettingsPage, settingsSections, type SettingsSectionId } from "@/slices/settings";
 import { pickFolder } from "./boot";
-import { closeTool, columnResized, layout, revealView, showRight, toggleColumn, toggleView } from "./layout";
+import {
+  closeSettings,
+  closeTool,
+  columnResized,
+  layout,
+  openSettings,
+  revealView,
+  showRight,
+  toggleColumn,
+  toggleSettings,
+  toggleView,
+} from "./layout";
 import { Welcome } from "./Welcome";
 import "./shell.css";
 
 const extras = allExtras(manifest);
+const SETTINGS_CHORD = "Mod+,";
 
 const shellCommands: Command[] = [
   { id: "shell.toggleLeft", chord: "Mod+b", run: () => toggleColumn("left") },
   { id: "shell.toggleRight", chord: "Mod+j", run: () => toggleColumn("right") },
   { id: "shell.toggleRightAlt", chord: "Mod+Alt+b", run: () => toggleColumn("right") },
   { id: "shell.openFolder", chord: "Mod+o", run: () => pickFolder() },
+  { id: "shell.toggleSettings", chord: SETTINGS_CHORD, run: () => toggleSettings() },
 ];
 
 const commands: Command[] = [
@@ -46,6 +63,8 @@ function useGlobalKeys() {
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
   useEffect(() => onReveal(revealView), []);
+  // A file opened from elsewhere (quick open, a terminal link) should be seen, so it leaves settings.
+  useEffect(() => watch({ get: editor.activePath, subscribe: editor.subscribeActive }, (p) => p, closeSettings), []);
   // Text fields hold code and paths: no autocorrect, capitalization, or spellcheck anywhere.
   useEffect(() => {
     const onFocus = (e: FocusEvent) => {
@@ -127,9 +146,18 @@ function Workbench() {
       <Separator className="sash" />
       {/* A hidden side column leaves its toggle at the editor's edge; `--inset-*` keeps tabs clear of it. */}
       <Panel id="main" minSize={300} className={`column column-main${st.leftOpen ? "" : " inset-left"}${st.rightOpen ? "" : " inset-right"}`}>
-        <Suspense fallback={null}>
-          <Main />
-        </Suspense>
+        <div className="view-host" style={{ display: st.settings ? "none" : undefined }}>
+          <Suspense fallback={null}>
+            <Main />
+          </Suspense>
+        </div>
+        {st.settings && (
+          <div className="view-host">
+            <Suspense fallback={null}>
+              <SettingsPage section={st.settings} />
+            </Suspense>
+          </div>
+        )}
         {!st.leftOpen && <ColumnToggle side="left" />}
         {!st.rightOpen && <ColumnToggle side="right" />}
       </Panel>
@@ -158,6 +186,7 @@ function syncPanel(p: PanelImperativeHandle, open: boolean, width: number) {
 
 function LeftColumn() {
   const ws = useStore(workspaceState);
+  const section = useStore(layout, (s) => s.settings);
   return (
     <div className="side">
       <div className="side-top traffic-lights" data-tauri-drag-region>
@@ -166,14 +195,41 @@ function LeftColumn() {
           L1 Code
         </span>
       </div>
-      <div className="side-body side-stack">
+      <div className="side-body side-stack" style={{ display: section ? "none" : undefined }}>
         {manifest.left.map((v) => (
           <Suspense key={v.id} fallback={<div className="empty">Loading…</div>}>
             <v.component />
           </Suspense>
         ))}
       </div>
+      {section && <SettingsNav active={section} />}
+      <div className="side-footer">
+        {section ? (
+          <button className="side-footer-btn" title={`Back (${chordLabel(SETTINGS_CHORD)})`} onClick={closeSettings}>
+            <ArrowLeft />
+            <span>Back</span>
+          </button>
+        ) : (
+          <button className="side-footer-btn" title={`Settings (${chordLabel(SETTINGS_CHORD)})`} onClick={() => openSettings()}>
+            <Settings />
+            <span>Settings</span>
+          </button>
+        )}
+      </div>
     </div>
+  );
+}
+
+function SettingsNav({ active }: { active: SettingsSectionId }) {
+  return (
+    <nav className="side-body settings-nav" aria-label="Settings sections">
+      {settingsSections.map((s) => (
+        <button key={s.id} className="settings-nav-item" aria-current={s.id === active ? "page" : undefined} onClick={() => openSettings(s.id)}>
+          <s.icon />
+          <span>{s.title}</span>
+        </button>
+      ))}
+    </nav>
   );
 }
 
