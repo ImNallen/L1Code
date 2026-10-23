@@ -121,6 +121,55 @@ kbd {
   min-height: 0;
 }
 
+/* Left footer: Settings, or Back while settings show. */
+.side-footer {
+  flex-shrink: 0;
+  padding: 6px;
+}
+.side-footer-btn,
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.side-footer-btn:hover,
+.settings-nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.side-footer-btn svg,
+.settings-nav-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  overflow-y: auto;
+}
+.settings-nav-item[aria-current="page"] {
+  background: var(--bg-active);
+  color: var(--fg);
+}
+.side-footer-btn:focus-visible,
+.settings-nav-item:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
 /* Right: tool tabs */
 .tool-tabs {
   display: flex;

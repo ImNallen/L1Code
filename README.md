@@ -31,6 +31,7 @@ cd src-tauri && cargo test               # also regenerates src/core/bindings.ge
 | Toggle the left or right column | ⌘B, ⌘J |
 | Save, close tab | ⌘S, ⌘W |
 | Open folder | ⌘O |
+| Settings | ⌘, |
 
 Running `l1code <path>` again hands the path to the running window. If `<path>` is a file, L1Code opens its folder and then the file.
 

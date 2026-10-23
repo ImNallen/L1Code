@@ -8,11 +8,12 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { channel, errorMessage, rust, type PtyEvent, type TerminalInfo } from "@/core/ipc";
-import { createStore, type ReadStore } from "@/core/store";
+import { createStore, watch, type ReadStore } from "@/core/store";
 import { toast } from "@/core/toast";
 import { currentRoot } from "@/core/workspace";
 import { editor } from "@/slices/editor";
 import { preview } from "@/slices/preview";
+import { settings } from "@/slices/settings";
 
 export interface TerminalSession {
   readonly id: number;
@@ -145,7 +146,7 @@ function sendSize(e: Entry) {
 function createEntry(info: TerminalInfo): Entry {
   const term = new Terminal({
     fontFamily: monoFont(),
-    fontSize: 12.5,
+    fontSize: settings.state.get().terminalFontSize,
     lineHeight: 1.2,
     cursorBlink: true,
     scrollback: 10_000,
@@ -283,9 +284,24 @@ export function attach(id: number, el: HTMLElement): () => void {
   return () => ro.disconnect();
 }
 
+function setFontSize(px: number) {
+  for (const e of entries.values()) {
+    e.term.options.fontSize = px;
+    // A hidden terminal has no size to fit to; it refits when its tool is shown again.
+    if (!e.term.element?.clientWidth) continue;
+    try {
+      e.fit.fit();
+    } catch {
+      continue;
+    }
+    sendSize(e);
+  }
+}
+
 /** Re-attaches every session Rust still has (they survive window reloads) and drops stale ones. */
 export function activate(): () => void {
   let cancelled = false;
+  const offFont = watch(settings.state, (s) => s.terminalFontSize, setFontSize);
   const before = new Set(entries.keys());
   void (async () => {
     try {
@@ -311,6 +327,7 @@ export function activate(): () => void {
   })();
   return () => {
     cancelled = true;
+    offFont();
     for (const id of [...entries.keys()]) dispose(id);
     autoOpened = false;
     store.set({ sessions: [], active: null, ready: false });

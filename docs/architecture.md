@@ -36,6 +36,27 @@ Everything else derives from that entry: the tab, its order, its shortcut, and t
 
 Use `defineLeftView({...})` and add the slice to `left: [...]` in the manifest. The left column gains a collapsible section.
 
+### Add a setting
+
+1. Add the key and its default to `Settings` and `defaultSettings` in `src/slices/settings/model.ts`.
+2. Add one row to a section in the same file's `sections` table:
+
+   ```ts
+   { kind: "toggle", key: "editorMinimap", label: "Minimap", description: "Show a map of the file beside the scrollbar." },
+   ```
+
+   A `toggle` takes a boolean key and a `choice` takes a number key with `options`. The page row, its control, and the validation of the stored value all derive from that entry.
+3. Read the value where it applies. Watch it from the consuming slice's `activate()` and return the unsubscribe with its other cleanups:
+
+   ```ts
+   import { settings } from "@/slices/settings";
+
+   applyMinimap(settings.state.get().editorMinimap);
+   const off = watch(settings.state, (s) => s.editorMinimap, applyMinimap);
+   ```
+
+Settings are app-wide and live under `l1code.settings` in localStorage, not in the per-workspace session.
+
 ### Open and save a file
 
 ```ts
