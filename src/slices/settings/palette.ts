@@ -28,8 +28,8 @@ export interface Palette {
   readonly ui: Readonly<UiColors>;
   readonly syntax: SyntaxColors;
   readonly terminal: TerminalColors;
-  /** Theme card orb fill: canvas 20% toward white (light) or zinc-950 (dark). */
-  readonly swatch: Hex;
+  /** Theme card orb: canvas 20% toward white (light) or zinc-950 (dark), lit by the accent and a 45% action glow. */
+  readonly orb: { readonly fill: Hex; readonly accent: Hex; readonly glow: Hex };
 }
 
 export function compile(id: ThemeId, scheme: Scheme, seeds: Seeds): Palette {
@@ -108,7 +108,7 @@ export function compile(id: ThemeId, scheme: Scheme, seeds: Seeds): Palette {
       cursorAccent: ui.bgPanel,
       selectionBackground: hex(accent, 0.3),
     },
-    swatch: hex(mix(canvas, dark ? ZINC : WHITE, 0.2)),
+    orb: { fill: hex(mix(canvas, dark ? ZINC : WHITE, 0.2)), accent: ui.accent, glow: hex(action, 0.45) },
   };
 }
 

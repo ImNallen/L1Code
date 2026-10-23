@@ -1,0 +1,192 @@
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.mode-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  color: var(--fg-muted);
+  text-align: left;
+  cursor: pointer;
+}
+.mode-btn:hover {
+  background: var(--bg-hover);
+}
+.mode-btn[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--fg);
+}
+.mode-label {
+  padding: 0 2px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* System stacks the dark mockup over the light one and shows only its right half. */
+.mode-art {
+  position: relative;
+  display: block;
+}
+.mode-art > .mock + .mock {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 0 0 50%);
+}
+
+.mock {
+  position: relative;
+  display: block;
+  height: 104px;
+  overflow: hidden;
+  border: 1px solid;
+  border-radius: var(--radius);
+}
+.mock i {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+}
+.mock-side {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 22%;
+  padding: 12px 7px;
+  border-right: 1px solid;
+}
+.mock-side i:nth-child(2) {
+  width: 80%;
+}
+.mock-side i:nth-child(3) {
+  width: 64%;
+}
+.mock-main {
+  position: absolute;
+  inset: 0 0 0 22%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+}
+.mock-main i:nth-child(1) {
+  width: 38%;
+  height: 7px;
+  opacity: 0.7;
+}
+.mock-main i:nth-child(2) {
+  width: 76%;
+}
+.mock-main i:nth-child(3) {
+  width: 58%;
+}
+.mock-main i:nth-child(4) {
+  width: 68%;
+}
+.mock b {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 12px;
+}
+
+/* The main button fills the card under the orbs, which take clicks only on the orbs themselves. */
+.theme-card {
+  position: relative;
+  padding: 14px 14px 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel);
+}
+.theme-card[data-active] {
+  border-color: var(--accent);
+}
+.theme-card-main {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 14px 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-size: var(--text-md);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.theme-card-main:hover {
+  background: var(--bg-hover);
+}
+.theme-orbs {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  width: max-content;
+  pointer-events: none;
+}
+
+.theme-orb {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.theme-orb-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  filter: blur(0.4px);
+}
+.theme-orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.theme-orb:hover::after {
+  box-shadow: inset 0 0 0 1px var(--fg-subtle);
+}
+.theme-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  padding: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 0 0 2px var(--bg-panel);
+}
+
+.mode-btn:focus-visible,
+.theme-card-main:focus-visible,
+.theme-orb:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
