@@ -27,7 +27,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 6px 6px 4px 8px;
+  padding: 6px 8px 4px 12px;
   flex-shrink: 0;
 }
 .explorer-filter {
@@ -37,17 +37,31 @@
   flex: 1;
   min-width: 0;
   margin-right: 4px;
+  border-radius: var(--radius-sm);
+  transition: background-color 120ms ease;
+}
+.explorer-filter:hover,
+.explorer-filter:focus-within {
+  background: var(--bg-hover);
 }
 .explorer-filter .input {
   height: 26px;
   padding: 0 26px 0 26px;
-  font-size: var(--text-sm);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+}
+.explorer-filter .input:focus-visible,
+.explorer-bar .icon-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
 }
 .explorer-filter-icon {
   position: absolute;
-  left: 8px;
-  width: 13px;
-  height: 13px;
+  left: 4px;
+  width: 14px;
+  height: 14px;
   color: var(--fg-subtle);
   pointer-events: none;
 }

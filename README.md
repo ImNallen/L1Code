@@ -25,7 +25,7 @@ cd src-tauri && cargo test               # also regenerates src/core/bindings.ge
 | Action | Keys |
 | --- | --- |
 | Quick open | ⌘P |
-| Filter files | ⌘⇧E |
+| Search | ⌘⇧E |
 | Terminal | ⌃` |
 | Changes | ⌘⇧D |
 | Toggle the left or right column | ⌘B, ⌘J |

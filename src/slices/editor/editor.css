@@ -15,7 +15,7 @@
 
 .tabbar {
   display: flex;
-  height: 34px;
+  height: var(--titlebar-h);
   flex-shrink: 0;
   /* The shell's column toggles sit in these insets while a side column is hidden. */
   padding: 0 var(--inset-right, 0) 0 var(--inset-left, 0);
