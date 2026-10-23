@@ -49,6 +49,8 @@ file-tree-container {
 diffs-container {
   --diffs-light-bg: var(--bg);
   --diffs-dark-bg: var(--bg);
+  --diffs-font-family: var(--font-mono);
+  --diffs-header-font-family: var(--font-ui);
 }
 
 /* Custom scrollbars take layout space in WebKit. `.native-scroll` opts out to get the platform's

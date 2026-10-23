@@ -277,7 +277,7 @@ kbd {
 }
 .welcome h1 {
   margin: 4px 0 0;
-  font-size: 20px;
+  font-size: calc(var(--text-md) + 7px);
   font-weight: 600;
 }
 .welcome-sub {

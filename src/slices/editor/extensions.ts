@@ -75,7 +75,7 @@ const theme = EditorView.theme({
   ".cm-searchMatch": { backgroundColor: "var(--search-bg)", outline: "1px solid var(--search-line)" },
   ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: "var(--search-current)" },
   ".cm-panels": { backgroundColor: "var(--bg-elev)", color: "var(--fg)", borderColor: "var(--border)" },
-  ".cm-panels input, .cm-panels button": { fontFamily: "var(--font-ui)", fontSize: "12px" },
+  ".cm-panels input, .cm-panels button": { fontFamily: "var(--font-ui)", fontSize: "var(--text-sm)" },
   ".cm-textfield": { backgroundColor: "var(--bg-input)", border: "1px solid var(--border-strong)", borderRadius: "4px", color: "var(--fg)" },
   ".cm-button": { backgroundImage: "none", backgroundColor: "var(--bg-hover)", border: "1px solid var(--border-strong)", borderRadius: "4px", color: "var(--fg)" },
   ".cm-tooltip": { backgroundColor: "var(--bg-elev)", border: "1px solid var(--border-strong)", borderRadius: "6px" },
