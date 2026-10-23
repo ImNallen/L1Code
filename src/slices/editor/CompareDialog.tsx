@@ -16,7 +16,7 @@ export default function CompareDialog(props: { path: string; disk: string; mine:
           <MultiFileDiff
             oldFile={{ name: props.path, contents: props.disk }}
             newFile={{ name: props.path, contents: props.mine }}
-            options={{ theme: "pierre-dark", diffStyle: "split" }}
+            options={{ theme: { light: "pierre-light", dark: "pierre-dark" }, themeType: "system", diffStyle: "split" }}
           />
         </div>
       </div>

@@ -28,14 +28,17 @@ import {
   rectangularSelection,
 } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
-import { settings } from "@/slices/settings";
+import { appearance, settings } from "@/slices/settings";
 
 /** Holds the language for a state. Shared across states: compartments are identity keys. */
 export const languageSlot = new Compartment();
 /** Holds line wrapping, reconfigured on every open doc when the setting changes. */
 export const wrapSlot = new Compartment();
+/** Holds CodeMirror's light or dark base theme, reconfigured on every open doc when the scheme changes. */
+export const schemeSlot = new Compartment();
 
 export const lineWrapping = (on: boolean): Extension => (on ? EditorView.lineWrapping : []);
+export const schemeFlag = (scheme: "light" | "dark"): Extension => EditorView.darkTheme.of(scheme === "dark");
 
 /** Colors are CSS variables, so a theme switch repaints open and cached background states with no reconfigure. */
 const syntax = (name: string) => `var(--syntax-${name})`;
@@ -58,30 +61,28 @@ const highlight = HighlightStyle.define([
   { tag: t.invalid, color: syntax("invalid") },
 ]);
 
-const theme = EditorView.theme(
-  {
-    "&": { height: "100%", color: "var(--fg)", backgroundColor: "var(--bg)", fontSize: "var(--editor-font-size)" },
-    ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "1.55" },
-    ".cm-content": { caretColor: "var(--accent)", padding: "6px 0" },
-    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent)", borderLeftWidth: "2px" },
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: "var(--editor-selection) !important" },
-    ".cm-activeLine": { backgroundColor: "var(--editor-active-line)" },
-    ".cm-gutters": { backgroundColor: "var(--bg)", color: "var(--editor-gutter)", border: "none", paddingLeft: "6px" },
-    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--fg-muted)" },
-    ".cm-foldGutter .cm-gutterElement": { color: "var(--editor-gutter)", cursor: "pointer" },
-    ".cm-matchingBracket": { backgroundColor: "var(--match-bg)", outline: "1px solid var(--match-line)" },
-    ".cm-selectionMatch": { backgroundColor: "var(--accent-bg)" },
-    ".cm-searchMatch": { backgroundColor: "var(--search-bg)", outline: "1px solid var(--search-line)" },
-    ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: "var(--search-current)" },
-    ".cm-panels": { backgroundColor: "var(--bg-elev)", color: "var(--fg)", borderColor: "var(--border)" },
-    ".cm-panels input, .cm-panels button": { fontFamily: "var(--font-ui)", fontSize: "12px" },
-    ".cm-textfield": { backgroundColor: "var(--bg-input)", border: "1px solid var(--border-strong)", borderRadius: "4px", color: "var(--fg)" },
-    ".cm-button": { backgroundImage: "none", backgroundColor: "var(--bg-hover)", border: "1px solid var(--border-strong)", borderRadius: "4px", color: "var(--fg)" },
-    ".cm-tooltip": { backgroundColor: "var(--bg-elev)", border: "1px solid var(--border-strong)", borderRadius: "6px" },
-    ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "var(--bg-selected)", color: "var(--fg)" },
-  },
-  { dark: true },
-);
+const theme = EditorView.theme({
+  "&": { height: "100%", color: "var(--fg)", backgroundColor: "var(--bg)", fontSize: "var(--editor-font-size)" },
+  "&.cm-focused": { outline: "none" },
+  ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "1.55" },
+  ".cm-content": { caretColor: "var(--accent)", padding: "6px 0" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent)", borderLeftWidth: "2px" },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: "var(--editor-selection) !important" },
+  ".cm-activeLine": { backgroundColor: "var(--editor-active-line)" },
+  ".cm-gutters": { backgroundColor: "var(--bg)", color: "var(--editor-gutter)", border: "none", paddingLeft: "6px" },
+  ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--fg-muted)" },
+  ".cm-foldGutter .cm-gutterElement": { color: "var(--editor-gutter)", cursor: "pointer" },
+  ".cm-matchingBracket": { backgroundColor: "var(--match-bg)", outline: "1px solid var(--match-line)" },
+  ".cm-selectionMatch": { backgroundColor: "var(--accent-bg)" },
+  ".cm-searchMatch": { backgroundColor: "var(--search-bg)", outline: "1px solid var(--search-line)" },
+  ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: "var(--search-current)" },
+  ".cm-panels": { backgroundColor: "var(--bg-elev)", color: "var(--fg)", borderColor: "var(--border)" },
+  ".cm-panels input, .cm-panels button": { fontFamily: "var(--font-ui)", fontSize: "12px" },
+  ".cm-textfield": { backgroundColor: "var(--bg-input)", border: "1px solid var(--border-strong)", borderRadius: "4px", color: "var(--fg)" },
+  ".cm-button": { backgroundImage: "none", backgroundColor: "var(--bg-hover)", border: "1px solid var(--border-strong)", borderRadius: "4px", color: "var(--fg)" },
+  ".cm-tooltip": { backgroundColor: "var(--bg-elev)", border: "1px solid var(--border-strong)", borderRadius: "6px" },
+  ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "var(--bg-selected)", color: "var(--fg)" },
+});
 
 /** Everything a document's EditorState needs except its language, which loads lazily. */
 export function baseExtensions(): Extension[] {
@@ -108,6 +109,7 @@ export function baseExtensions(): Extension[] {
     theme,
     languageSlot.of([]),
     wrapSlot.of(lineWrapping(settings.state.get().editorWordWrap)),
+    schemeSlot.of(schemeFlag(appearance.state.get().scheme)),
   ];
 }
 

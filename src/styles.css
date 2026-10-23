@@ -45,6 +45,17 @@ button {
   color: inherit;
 }
 
+/* @pierre/diffs and @pierre/trees declare `color-scheme: light dark` on their hosts, which follows the
+   OS. Inheriting the app's scheme makes their light-dark() colors follow the theme instead. */
+diffs-container,
+file-tree-container {
+  color-scheme: inherit;
+}
+diffs-container {
+  --diffs-light-bg: var(--bg);
+  --diffs-dark-bg: var(--bg);
+}
+
 /* Custom scrollbars take layout space in WebKit. `.native-scroll` opts out to get the platform's
    overlay scrollbars, for surfaces whose content should reach the edge. */
 :not(.native-scroll)::-webkit-scrollbar {

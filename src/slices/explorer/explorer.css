@@ -1,7 +1,6 @@
 .explorer-tree {
   flex: 1;
   min-height: 0;
-  color-scheme: dark;
   --trees-theme-sidebar-bg: var(--bg-panel);
   --trees-theme-sidebar-fg: var(--sidebar-fg);
   --trees-theme-sidebar-header-fg: var(--fg-subtle);
