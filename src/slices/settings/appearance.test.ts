@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import indexHtml from "@/../index.html?raw";
+import { CACHE_KEY, STYLE_ID } from "./appearance";
 import { contrast } from "./color";
 import { paletteCss, palettes, resolvePalette, type Palette } from "./palette";
 import { themes } from "./themes";
@@ -69,4 +71,39 @@ describe("resolvePalette", () => {
     expect(resolvePalette({ ...prefs, appearanceMode: "light" }, "dark")).toBe(palettes.grove.light);
     expect(resolvePalette({ ...prefs, appearanceMode: "dark" }, "light")).toBe(palettes.iris.dark);
   });
+});
+
+describe("stylesheets", () => {
+  const sheets = import.meta.glob<string>("/src/**/*.css", { query: "?raw", import: "default", eager: true });
+  const palette = Object.keys(declarations(paletteCss(palettes.l1code.dark)));
+
+  it("load as text", () => {
+    expect(Object.keys(sheets).length).toBeGreaterThan(5);
+    for (const [file, css] of Object.entries(sheets)) expect(css.length, file).toBeGreaterThan(0);
+  });
+
+  it("hold no color literals, so the palette is the only source of color", () => {
+    for (const [file, css] of Object.entries(sheets)) {
+      const literals = css.match(/#[0-9a-f]{3,8}\b|\b(rgba?|hsla?|oklch|oklab)\(/gi) ?? [];
+      // The preview iframe's white is the previewed page's own canvas, not app chrome.
+      const allowed = file.endsWith("/preview.css") ? ["#fff"] : [];
+      expect(literals.filter((l) => !allowed.includes(l)), file).toEqual([]);
+    }
+  });
+
+  it("read only variables that the palette or a stylesheet declares", () => {
+    const all = Object.values(sheets).join("\n");
+    const declared = new Set([...palette, ...[...all.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1])]);
+    const read = new Set([...all.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]));
+    expect([...read].filter((v) => !declared.has(v))).toEqual([]);
+  });
+});
+
+it("index.html paints the cached palette into the element the runtime repaints", () => {
+  const script = indexHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? "";
+  const appended: object[] = [];
+  const document = { head: { appendChild: (el: object) => (appended.push(el), el) }, createElement: () => ({}) };
+  const localStorage = { getItem: (key: string) => (key === CACHE_KEY ? ":root{--bg:#123456;}" : null) };
+  new Function("document", "localStorage", script)(document, localStorage);
+  expect(appended).toEqual([{ id: STYLE_ID, textContent: ":root{--bg:#123456;}" }]);
 });

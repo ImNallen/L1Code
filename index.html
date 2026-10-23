@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>L1Code</title>
+    <meta name="color-scheme" content="light dark" />
+    <!-- Paints the last palette before the bundle loads. src/slices/settings/appearance.ts owns both names. -->
+    <script>
+      try {
+        const style = document.head.appendChild(document.createElement("style"));
+        style.id = "l1code-palette";
+        style.textContent = localStorage.getItem("l1code.palette-css") ?? "";
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

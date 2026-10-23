@@ -1,68 +1,8 @@
 /* Global tokens and the few shared primitives every slice uses. Slice-specific CSS lives next to
-   the slice in a `*.css` file imported by its component. */
+   the slice in a `*.css` file imported by its component. Colors are not here: the settings slice
+   writes them, with `color-scheme`, as variables on :root from the active theme's palette. */
 
 :root {
-  color-scheme: dark;
-  --bg: #0f1115;
-  --bg-panel: #13161b;
-  --bg-elev: #191d24;
-  --bg-input: #0c0e12;
-  --bg-hover: #1e232b;
-  --bg-active: #242b36;
-  --bg-selected: #1f3150;
-  --border: #232831;
-  --border-strong: #2e3541;
-  --fg: #d7dce4;
-  --fg-muted: #9aa3b2;
-  --fg-subtle: #6b7383;
-  --accent: #7aa2ff;
-  --accent-strong: #9bb8ff;
-  --accent-bg: rgba(122, 162, 255, 0.14);
-  --on-accent: #0b1020;
-  --action: #7aa2ff;
-  --action-strong: #9bb8ff;
-  --on-action: #0b1020;
-  --success: #7ccf9b;
-  --warning: #e5c07b;
-  --danger: #f2777a;
-  --added: #7ccf9b;
-  --modified: #e5c07b;
-  --deleted: #f2777a;
-  --untracked: #7ccf9b;
-  --success-bg: #7ccf9b26;
-  --warning-bg: #e5c07b1a;
-  --warning-line: #e5c07b4d;
-  --danger-bg: #f2777a1f;
-  --danger-line: #f2777a80;
-  --merged: #b89bff;
-  --merged-bg: #b89bff29;
-  --fg-faint: #20252e;
-  --sidebar-fg: #c3c9d4;
-  --scrollbar: #ffffff14;
-  --scrollbar-hover: #ffffff29;
-  --shadow: #00000073;
-  --shadow-strong: #00000080;
-  --backdrop: #00000080;
-  --backdrop-soft: #00000040;
-  --editor-selection: #2a3b5c;
-  --editor-active-line: #ffffff08;
-  --editor-gutter: #4b5261;
-  --match-bg: #7aa2ff2e;
-  --match-line: #7aa2ff66;
-  --search-bg: #e5c07b40;
-  --search-line: #e5c07b80;
-  --search-current: #e5c07b73;
-  --syntax-comment: #6b7383;
-  --syntax-keyword: #c792ea;
-  --syntax-string: #a5d6a7;
-  --syntax-number: #f78c6c;
-  --syntax-fn: #82aaff;
-  --syntax-type: #ffcb6b;
-  --syntax-prop: #89ddff;
-  --syntax-tag: #f07178;
-  --syntax-constant: #f78c6c;
-  --syntax-punct: #a9b1c1;
-  --syntax-invalid: #f2777a;
   --font-ui: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
   --text-xs: 11px;
@@ -76,6 +16,13 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Set for one frame while the palette changes, so the UI switches colors without animating them. */
+.no-transitions *,
+.no-transitions *::before,
+.no-transitions *::after {
+  transition: none !important;
 }
 
 html,
