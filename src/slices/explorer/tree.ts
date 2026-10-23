@@ -6,7 +6,9 @@ import { FileTree, prepareFileTreeInput, type FileTreeBatchOperation, type GitSt
 import { errorMessage, rust, type FsBatch, type GitStatus } from "@/core/ipc";
 import { createStore, type ReadStore } from "@/core/store";
 import { toast } from "@/core/toast";
+import { workspaceState } from "@/core/workspace";
 import { editor } from "@/slices/editor";
+import { selectionIntentFor, type SelectionIntent, type TreeInputEvent } from "./treeInput";
 
 export interface ExplorerState {
   readonly status: "idle" | "loading" | "ready" | "failed";
@@ -15,6 +17,26 @@ export interface ExplorerState {
   readonly fileCount: number;
 }
 
+type RelPath = Parameters<typeof rust.fsCreate>[0];
+export type TreeDirectory = { kind: "root" } | { kind: "directory"; path: RelPath };
+export type TreeNode = TreeDirectory | { kind: "file"; path: RelPath };
+export type CreateTarget = { kind: "selection" } | { kind: "item"; node: TreeNode };
+
+interface FilterSession {
+  readonly expanded: readonly string[];
+  selected: readonly TreeNode[];
+}
+
+interface InputScope {
+  readonly event: TreeInputEvent;
+  readonly intent: SelectionIntent;
+  readonly session: FilterSession;
+  readonly canonicalBefore: readonly TreeNode[];
+  readonly nativeBefore: readonly TreeNode[];
+}
+
+type RenameTarget = Exclude<TreeNode, { kind: "root" }>;
+
 const store = createStore<ExplorerState>({ status: "idle", gen: 0, fileCount: 0 });
 export const explorerState: ReadStore<ExplorerState> = store;
 
@@ -22,22 +44,107 @@ export const explorerState: ReadStore<ExplorerState> = store;
 let paths = new Set<string>();
 let files: string[] = [];
 let model: FileTree | null = null;
-/** A row added by "New File/Folder" that becomes real only when its rename is confirmed. */
 let pendingNew: { path: string; dir: boolean } | null = null;
+let rootPath = "";
+let filterSession: FilterSession | null = null;
+let updatingProjection = false;
+let inputScope: InputScope | null = null;
+let inputCompletion: ReturnType<typeof setTimeout> | undefined;
+let acceptedRename: RenameTarget | null = null;
 
 /** The filter typed above the tree. The model hides every row that doesn't match it. */
 const filterStore = createStore("");
 export const explorerFilter: ReadStore<string> = filterStore;
 
+export function captureTreeInput(event: TreeInputEvent): void {
+  activeInputScope();
+  clearTreeInput();
+  if (!model || !filterSession) return;
+  const intent = selectionIntentFor(event, { searchOpen: model.isSearchOpen(), hasFocusedItem: model.getFocusedItem() !== null });
+  if (intent === null) return;
+  const scope: InputScope = {
+    event, intent, session: filterSession,
+    canonicalBefore: filterSession.selected,
+    nativeBefore: selectedNodes(),
+  };
+  inputScope = scope;
+  // Native dispatch can run microtasks between capture and target listeners.
+  inputCompletion = setTimeout(() => completeTreeInput(scope), 0);
+}
+
+export function clearTreeInput(): void {
+  clearTimeout(inputCompletion);
+  inputCompletion = undefined;
+  inputScope = null;
+  acceptedRename = null;
+}
+
+function completeTreeInput(scope: InputScope): void {
+  if (inputScope !== scope) return;
+  clearTimeout(inputCompletion);
+  inputCompletion = undefined;
+  inputScope = null;
+  reconcileInput(scope);
+}
+
+function activeInputScope(): InputScope | null {
+  if (inputScope?.event.eventPhase === 0) completeTreeInput(inputScope);
+  return inputScope;
+}
+
+function reconcileInput(scope: InputScope): void {
+  if (filterSession !== scope.session) return;
+  const selected = selectedNodes();
+  switch (scope.intent) {
+    case "preserve":
+      commitFilteredSelection(filterSession, scope.canonicalBefore);
+      break;
+    case "replace":
+      commitFilteredSelection(filterSession, selected);
+      break;
+    case "delta": {
+      const before = new Set(scope.nativeBefore.map(toModel));
+      const after = new Set(selected.map(toModel));
+      const canonical = new Map(scope.canonicalBefore.map((node) => [toModel(node), node]));
+      for (const path of before) if (!after.has(path)) canonical.delete(path);
+      for (const node of selected) if (!before.has(toModel(node))) canonical.set(toModel(node), node);
+      commitFilteredSelection(filterSession, [...canonical.values()]);
+      break;
+    }
+  }
+}
+
+function commitFilteredSelection(session: FilterSession, selected: readonly TreeNode[]): void {
+  const previous = session.selected;
+  session.selected = selected;
+  openSelectedFile(selected, previous);
+}
+
+function openSelectedFile(selected: readonly TreeNode[], previous: readonly TreeNode[] = []): void {
+  const only = selected.length === 1 ? selected[0] : undefined;
+  if (only?.kind !== "file") return;
+  if (previous.length === 1 && previous[0]?.kind === "file" && previous[0].path === only.path) return;
+  void editor.open(only.path, { focus: false });
+}
+
 export function setFilter(value: string): void {
+  activeInputScope();
+  const expanded = expandedPaths();
+  if (!searchQuery() && value.trim()) filterSession = { expanded, selected: selectedNodes() };
   filterStore.set(value);
-  model?.setSearch(value || null);
+  resetProjection(searchQuery() ? expanded : (filterSession?.expanded ?? expanded));
+  if (!searchQuery()) filterSession = null;
 }
 
 /** The first file the filter matches, for Enter in the filter box. */
 export function firstMatch(): string | null {
-  const hit = model?.getSearchMatchingPaths().find((p) => !isDirPath(p));
-  return hit ? stripSlash(hit) : null;
+  const query = searchQuery();
+  if (!query) return null;
+  for (const path of model?.getSearchMatchingPaths() ?? []) {
+    const node = nodeFor(path);
+    if (node?.kind === "file" && node.path.toLowerCase().includes(query)) return node.path;
+  }
+  return null;
 }
 
 export function treeModel(): FileTree | null {
@@ -49,6 +156,8 @@ export function filePaths(): readonly string[] {
 }
 
 export async function load(): Promise<void> {
+  const ws = workspaceState.get();
+  if (ws.status !== "open") return;
   store.update((s) => ({ ...s, status: s.status === "ready" ? "ready" : "loading" }));
   let raw: string;
   try {
@@ -59,40 +168,80 @@ export async function load(): Promise<void> {
     return;
   }
   const list = raw ? raw.split("\n") : [];
+  const expanded = expandedPaths();
   paths = new Set(list);
-  const preparedInput = prepareFileTreeInput(list);
   if (model) {
-    model.resetPaths({ preparedInput });
-    if (filterStore.get()) model.setSearch(filterStore.get());
+    resetProjection(expanded);
   } else {
+    rootPath = `${ws.info.name === "/" ? "Workspace" : ws.info.name}/`;
     model = new FileTree({
-      preparedInput,
-      flattenEmptyDirectories: true,
+      preparedInput: projectedInput(),
+      flattenEmptyDirectories: false,
       initialExpansion: "closed",
+      initialExpandedPaths: [rootPath],
       fileTreeSearchMode: "hide-non-matches",
-      initialSearchQuery: filterStore.get() || null,
+      initialSearchQuery: null,
+      onSearchChange: (value) => {
+        if (updatingProjection) return;
+        if (value === null && filterSession) {
+          if (acceptedRename) {
+            filterSession = {
+              expanded: [...new Set([...filterSession.expanded, ...expandedPaths()])],
+              selected: [acceptedRename],
+            };
+          } else {
+            const scope = activeInputScope();
+            if (scope) reconcileInput(scope);
+          }
+        }
+        setFilter(value ?? "");
+      },
       stickyFolders: true,
       density: "compact",
       composition: { contextMenu: { enabled: true, triggerMode: "right-click" } },
-      onSelectionChange: (selected) => {
-        const only = selected.length === 1 ? selected[0] : undefined;
-        if (only && !isDirPath(only)) void editor.open(stripSlash(only), { focus: false });
+      onSelectionChange: () => {
+        if (updatingProjection) return;
+        if (filterSession) {
+          const scope = activeInputScope();
+          if (scope) reconcileInput(scope);
+          else commitFilteredSelection(filterSession, selectedNodes());
+        } else {
+          openSelectedFile(selectedNodes());
+        }
       },
       renaming: {
+        canRename: ({ path }) => {
+          const node = nodeFor(path);
+          if (!node || node.kind === "root") return false;
+          acceptedRename = node;
+          queueMicrotask(() => {
+            if (acceptedRename === node) acceptedRename = null;
+          });
+          return true;
+        },
         onRename: (e) => void commitRename(e.sourcePath, e.destinationPath, e.isFolder),
         onError: (msg) => toast(msg, "error"),
       },
       unsafeCSS: TREE_CSS,
     });
+    if (searchQuery()) {
+      filterSession = { expanded: [rootPath], selected: [] };
+      resetProjection([rootPath]);
+    }
   }
   updateFiles();
 }
 
 export function dispose(): void {
+  clearTreeInput();
   model?.cleanUp();
   model = null;
   paths = new Set();
   files = [];
+  pendingNew = null;
+  rootPath = "";
+  filterSession = null;
+  clearTimeout(reloadTimer);
   filterStore.set("");
   store.set({ status: "idle", gen: 0, fileCount: 0 });
 }
@@ -107,6 +256,7 @@ function scheduleReload() {
 export function applyFsBatch(batch: FsBatch): void {
   if (!model) return;
   if (batch.overflow) return scheduleReload();
+  const expanded = searchQuery() ? expandedPaths() : [];
   const ops: FileTreeBatchOperation[] = [];
   for (const c of batch.changes) {
     const file = c.path;
@@ -117,20 +267,21 @@ export function applyFsBatch(batch: FsBatch): void {
         if (!paths.has(dir)) return scheduleReload();
       } else if (!paths.has(file)) {
         paths.add(file);
-        ops.push({ type: "add", path: file });
+        ops.push({ type: "add", path: modelPath(file) });
       }
     } else if (paths.has(file)) {
       paths.delete(file);
-      ops.push({ type: "remove", path: file });
+      ops.push({ type: "remove", path: modelPath(file) });
     } else if (paths.has(dir)) {
       for (const p of [...paths]) if (p.startsWith(dir)) paths.delete(p);
       paths.delete(dir);
-      ops.push({ type: "remove", path: dir, recursive: true });
+      ops.push({ type: "remove", path: modelPath(dir), recursive: true });
     }
   }
   if (!ops.length) return;
   try {
-    model.batch(ops);
+    if (searchQuery()) resetProjection(expanded);
+    else model.batch(ops);
   } catch {
     return scheduleReload();
   }
@@ -144,7 +295,7 @@ export function applyGitStatus(status: GitStatus | null): void {
     const kind = f.unstaged ?? f.staged;
     if (!kind) continue;
     const mapped = kind === "conflicted" ? "modified" : kind;
-    if (paths.has(f.path)) entries.push({ path: f.path, status: mapped });
+    if (paths.has(f.path)) entries.push({ path: modelPath(f.path), status: mapped });
   }
   model.setGitStatus(entries);
 }
@@ -152,37 +303,61 @@ export function applyGitStatus(status: GitStatus | null): void {
 /** Expands the ancestors of `path` and scrolls it into view without opening anything. */
 export function reveal(path: string): void {
   if (!model || !paths.has(path)) return;
-  const parts = path.split("/");
+  const projected = modelPath(path);
+  if (filterStore.get() && !model.getItem(projected)) setFilter("");
+  const parts = projected.split("/");
   for (let i = 1; i < parts.length; i++) {
     const dir = parts.slice(0, i).join("/") + "/";
-    const item = dirHandle(model.getItem(dir) ?? model.getItem(dir.slice(0, -1)));
+    const item = dirHandle(model.getItem(dir));
     if (item && !item.isExpanded()) item.expand();
   }
-  model.scrollToPath(path, { focus: false, offset: "nearest" });
+  model.scrollToPath(projected, { focus: false, offset: "nearest" });
 }
 
-/** Adds a placeholder row under `parent` and starts renaming it. Confirming creates it on disk. */
-export function startCreate(parent: string | null, dir: boolean): void {
+/** Decodes a live library identity. Domain paths never include the display root. */
+export function nodeFor(path: string): TreeNode | null {
+  if (!rootPath || (path !== stripSlash(rootPath) && !path.startsWith(rootPath))) return null;
+  const item = model?.getItem(path);
+  return item ? decodePath(item.getPath(), item.isDirectory()) : null;
+}
+
+export function directoryFor(node: TreeNode): TreeDirectory {
+  if (node.kind !== "file") return node;
+  const parent = node.path.slice(0, node.path.lastIndexOf("/") + 1);
+  return parent ? { kind: "directory", path: stripSlash(parent) } : { kind: "root" };
+}
+
+/** Adds a placeholder row at `target` and starts renaming it. Confirming creates it on disk. */
+export function startCreate(target: CreateTarget, dir: boolean): void {
   if (!model) return;
-  const base = parent ? stripSlash(parent) + "/" : "";
+  activeInputScope();
+  const selected = filterSession?.selected ?? selectedNodes();
+  const anchor = target.kind === "item" ? nodeFor(toModel(target.node)) : selected.length === 1 ? selected[0] : null;
+  if (target.kind === "item" && !anchor) return;
+  const parent: TreeDirectory = anchor ? directoryFor(anchor) : { kind: "root" };
+  if (filterStore.get()) setFilter("");
+  const base = parent.kind === "root" ? "" : parent.path + "/";
   let name = dir ? "new-folder" : "untitled";
   for (let i = 2; paths.has(base + name) || paths.has(base + name + "/"); i++) name = `${dir ? "new-folder" : "untitled"}-${i}`;
   const path = base + name + (dir ? "/" : "");
   pendingNew = { path: stripSlash(path), dir };
-  if (parent) {
-    dirHandle(model.getItem(parent) ?? model.getItem(stripSlash(parent) + "/"))?.expand();
-  }
-  model.add(path);
-  model.startRenaming(path, { removeIfCanceled: true });
+  dirHandle(model.getItem(toModel(parent)))?.expand();
+  model.add(modelPath(path));
+  model.startRenaming(modelPath(path), { removeIfCanceled: true });
 }
 
-export function startRename(path: string): void {
-  model?.startRenaming(path);
+export function startRename(node: TreeNode): void {
+  const current = nodeFor(toModel(node));
+  if (!current || current.kind === "root") return;
+  if (filterStore.get()) setFilter("");
+  model?.startRenaming(toModel(current));
 }
 
-export async function remove(path: string): Promise<void> {
+export async function remove(node: TreeNode): Promise<void> {
+  const current = nodeFor(toModel(node));
+  if (!current || current.kind === "root") return;
   try {
-    await rust.fsDelete(stripSlash(path));
+    await rust.fsDelete(current.path);
   } catch (e) {
     toast(`Delete failed: ${errorMessage(e)}`, "error");
   }
@@ -190,8 +365,11 @@ export async function remove(path: string): Promise<void> {
 }
 
 async function commitRename(source: string, dest: string, isFolder: boolean): Promise<void> {
-  const from = stripSlash(source);
-  const to = stripSlash(dest);
+  const sourceNode = nodeFor(source);
+  const destNode = decodePath(dest, isFolder);
+  if (!sourceNode || sourceNode.kind === "root" || !destNode || destNode.kind === "root") return;
+  const from = sourceNode.path;
+  const to = destNode.path;
   if (pendingNew && pendingNew.path === from) {
     const dir = pendingNew.dir;
     pendingNew = null;
@@ -239,11 +417,84 @@ type ItemHandle = ReturnType<FileTree["getItem"]>;
 type DirHandle = Extract<NonNullable<ItemHandle>, { expand(): void }>;
 
 function dirHandle(item: ItemHandle): DirHandle | null {
-  return item && "expand" in item ? (item as DirHandle) : null;
+  return item && "expand" in item ? item : null;
 }
 
-function isDirPath(p: string) {
-  return p.endsWith("/") || paths.has(p + "/");
+function modelPath(path: RelPath): string {
+  return rootPath + path;
+}
+
+function toModel(node: TreeNode): string {
+  return node.kind === "root" ? rootPath : modelPath(node.path + (node.kind === "directory" ? "/" : ""));
+}
+
+function decodePath(path: string, directory: boolean): TreeNode | null {
+  if (path === rootPath || path === stripSlash(rootPath)) return { kind: "root" };
+  if (!path.startsWith(rootPath)) return null;
+  const relative = stripSlash(path.slice(rootPath.length));
+  if (!relative) return null;
+  return { kind: directory ? "directory" : "file", path: relative };
+}
+
+function searchQuery(): string {
+  return filterStore.get().trim().replaceAll("\\", "/").toLowerCase();
+}
+
+function projectedInput() {
+  const query = searchQuery();
+  const matching = [...paths].filter((path) => !query || path.toLowerCase().includes(query));
+  return prepareFileTreeInput([rootPath, ...matching.map(modelPath)]);
+}
+
+function directoryPaths(): Set<string> {
+  const directories = new Set([rootPath]);
+  for (const path of paths) {
+    const projected = modelPath(path);
+    for (let end = projected.indexOf("/"); end >= 0; end = projected.indexOf("/", end + 1)) {
+      directories.add(projected.slice(0, end + 1));
+    }
+  }
+  return directories;
+}
+
+function expandedPaths(): string[] {
+  return [...directoryPaths()].filter((path) => dirHandle(model?.getItem(path) ?? null)?.isExpanded());
+}
+
+function selectedNodes(): TreeNode[] {
+  return (model?.getSelectedPaths() ?? []).flatMap((path) => {
+    const node = nodeFor(path);
+    return node ? [node] : [];
+  });
+}
+
+function resetProjection(expanded: readonly string[]): void {
+  if (!model) return;
+  activeInputScope();
+  clearTreeInput();
+  const preparedInput = projectedInput();
+  const directories = directoryPaths();
+  const selected = (filterSession?.selected ?? selectedNodes()).filter((node) =>
+    node.kind === "file" ? paths.has(node.path) : directories.has(toModel(node)),
+  );
+  if (filterSession) filterSession.selected = selected;
+  updatingProjection = true;
+  try {
+    model.setSearch(null);
+    model.resetPaths({ preparedInput, initialExpandedPaths: expanded });
+    // FileTree expands ancestors of initialExpandedPaths, even deliberately collapsed ones.
+    const requested = new Set(expanded);
+    for (const path of directories) {
+      const item = dirHandle(model.getItem(path));
+      if (item?.isExpanded() && !requested.has(path)) item.collapse();
+    }
+    for (const path of model.getSelectedPaths()) model.getItem(path)?.deselect();
+    for (const node of selected) model.getItem(toModel(node))?.select();
+    const query = searchQuery();
+    model.setSearch(query && preparedInput.paths.length > 1 ? query : null);
+  } finally {
+    updatingProjection = false;
+  }
 }
 
 function stripSlash(p: string) {

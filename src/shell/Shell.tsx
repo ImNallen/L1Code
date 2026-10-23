@@ -163,7 +163,7 @@ function LeftColumn() {
       <div className="side-top traffic-lights" data-tauri-drag-region>
         <ColumnToggle side="left" />
         <span className="side-title" title={ws.status === "open" ? ws.info.root : undefined} data-tauri-drag-region>
-          {ws.status === "open" ? ws.info.name : ""}
+          L1 Code
         </span>
       </div>
       <div className="side-body side-stack">
