@@ -1,10 +1,11 @@
 // Owns the resolved palette: the one store every color consumer reads. It derives from the appearance
-// settings and the OS scheme, and it is the only code that writes colors to the document or the native
-// window. Importing it touches no DOM; `startAppearance` does.
+// settings and the OS scheme, and it is the only code that writes colors and font tokens to the
+// document or the native window. Importing it touches no DOM; `startAppearance` does.
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createStore, watch, type ReadStore } from "@/core/store";
 import type { AppearanceMode } from "./model";
+import { fontsCss } from "./fonts";
 import { paletteCss, resolvePalette, type Palette } from "./palette";
 import { settingsState } from "./store";
 import type { Scheme } from "./themes";
@@ -18,7 +19,7 @@ export const paletteState: ReadStore<Palette> = store;
 
 let started = false;
 
-/** Paints the palette and follows changes from then on. Call once before the first render; repeats do nothing. */
+/** Paints the palette and fonts and follows changes from then on. Call once before the first render; repeats do nothing. */
 export function startAppearance(): void {
   if (started) return;
   started = true;
@@ -32,9 +33,10 @@ export function startAppearance(): void {
   recompute();
 
   const style = document.getElementById(STYLE_ID) ?? document.head.appendChild(Object.assign(document.createElement("style"), { id: STYLE_ID }));
-  const paint = (p: Palette) => {
+  const paint = () => {
     const root = document.documentElement;
-    const css = paletteCss(p);
+    const p = store.get();
+    const css = paletteCss(p) + fontsCss(settingsState.get());
     root.classList.add("no-transitions");
     style.textContent = css;
     root.dataset.theme = p.id;
@@ -44,8 +46,9 @@ export function startAppearance(): void {
     requestAnimationFrame(() => root.classList.remove("no-transitions"));
     localStorage.setItem(CACHE_KEY, css);
   };
-  paint(store.get());
+  paint();
   watch(store, (p) => p, paint);
+  watch(settingsState, fontsCss, paint);
 
   const syncWindow = (mode: AppearanceMode) => void getCurrentWindow().setTheme(mode === "system" ? null : mode).catch(() => {});
   syncWindow(settingsState.get().appearanceMode);

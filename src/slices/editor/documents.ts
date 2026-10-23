@@ -339,8 +339,8 @@ export function activate(): () => void {
   });
   const onFocus = () => void reconcileAll();
   window.addEventListener("focus", onFocus);
-  applyFontSize(settings.state.get().editorFontSize);
-  const offFont = watch(settings.state, (s) => s.editorFontSize, applyFontSize);
+  // The theme reads the font from CSS variables the settings slice paints; the view must remeasure lines.
+  const offFont = watch(settings.state, (s) => `${s.editorFontSize}px ${s.editorFontFamily}`, () => bound?.view.requestMeasure());
   const offWrap = watch(settings.state, (s) => s.editorWordWrap, (on) => {
     const effects = wrapSlot.reconfigure(lineWrapping(on));
     for (const d of store.get().open) transact(d.path, { effects });
@@ -412,12 +412,6 @@ function transact(path: string, spec: TransactionSpec): void {
   }
   const doc = find(path);
   if (doc) patch(path, { state: doc.state.update(spec).state });
-}
-
-/** The theme reads the size from a CSS variable; the bound view must remeasure line heights. */
-function applyFontSize(px: number): void {
-  document.documentElement.style.setProperty("--editor-font-size", `${px}px`);
-  bound?.view.requestMeasure();
 }
 
 function show(path: string, opts: OpenOptions): void {

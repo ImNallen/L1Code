@@ -13,7 +13,7 @@ import { toast } from "@/core/toast";
 import { currentRoot } from "@/core/workspace";
 import { editor } from "@/slices/editor";
 import { preview } from "@/slices/preview";
-import { appearance, settings } from "@/slices/settings";
+import { appearance, fontStack, settings, type Settings } from "@/slices/settings";
 
 export interface TerminalSession {
   readonly id: number;
@@ -47,9 +47,8 @@ interface Entry {
 const entries = new Map<number, Entry>();
 const isMac = navigator.platform.toLowerCase().includes("mac");
 
-function monoFont(): string {
-  const css = getComputedStyle(document.documentElement).getPropertyValue("--font-mono").trim();
-  return css || 'ui-monospace, Menlo, monospace';
+function terminalFont(s: Settings) {
+  return { fontFamily: fontStack("terminal", s), fontSize: s.terminalFontSize };
 }
 
 /** UTF-8 length of a JS string without allocating. Rust offsets count bytes. */
@@ -121,8 +120,7 @@ function sendSize(e: Entry) {
 
 function createEntry(info: TerminalInfo): Entry {
   const term = new Terminal({
-    fontFamily: monoFont(),
-    fontSize: settings.state.get().terminalFontSize,
+    ...terminalFont(settings.state.get()),
     lineHeight: 1.2,
     cursorBlink: true,
     scrollback: 10_000,
@@ -260,9 +258,10 @@ export function attach(id: number, el: HTMLElement): () => void {
   return () => ro.disconnect();
 }
 
-function setFontSize(px: number) {
+function applyFont() {
+  const font = terminalFont(settings.state.get());
   for (const e of entries.values()) {
-    e.term.options.fontSize = px;
+    Object.assign(e.term.options, font);
     // A hidden terminal has no size to fit to; it refits when its tool is shown again.
     if (!e.term.element?.clientWidth) continue;
     try {
@@ -277,7 +276,7 @@ function setFontSize(px: number) {
 /** Re-attaches every session Rust still has (they survive window reloads) and drops stale ones. */
 export function activate(): () => void {
   let cancelled = false;
-  const offFont = watch(settings.state, (s) => s.terminalFontSize, setFontSize);
+  const offFont = watch(settings.state, (s) => `${s.terminalFontSize}px ${fontStack("terminal", s)}`, applyFont);
   const offTheme = watch(appearance.state, (p) => p.terminal, (theme) => {
     for (const e of entries.values()) e.term.options.theme = theme;
   });

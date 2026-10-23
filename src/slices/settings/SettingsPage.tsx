@@ -2,7 +2,6 @@
 // description, and its control.
 
 import { createElement, useId, type ComponentType } from "react";
-import { ChevronDown } from "lucide-react";
 import AppearanceSection from "./AppearanceSection";
 import { settingsSections, type PanelId, type RowDef, type SettingsSectionId } from "./model";
 import { setSetting, useSetting } from "./store";
@@ -45,12 +44,12 @@ function SettingRow({ def }: { def: RowDef }) {
         </label>
         <p id={`${id}-desc`}>{def.description}</p>
       </div>
-      {def.kind === "toggle" ? <Toggle def={def} id={id} /> : <Choice def={def} id={id} />}
+      <Toggle def={def} id={id} />
     </div>
   );
 }
 
-function Toggle({ def, id }: { def: Extract<RowDef, { kind: "toggle" }>; id: string }) {
+function Toggle({ def, id }: { def: RowDef; id: string }) {
   const on = useSetting(def.key);
   return (
     <button
@@ -65,26 +64,5 @@ function Toggle({ def, id }: { def: Extract<RowDef, { kind: "toggle" }>; id: str
     >
       <span className="switch-thumb" />
     </button>
-  );
-}
-
-function Choice({ def, id }: { def: Extract<RowDef, { kind: "choice" }>; id: string }) {
-  const value = useSetting(def.key);
-  return (
-    <div className="settings-select">
-      <select
-        id={`${id}-control`}
-        aria-describedby={`${id}-desc`}
-        value={String(value)}
-        onChange={(e) => setSetting(def.key, Number(e.target.value))}
-      >
-        {def.options.map((o) => (
-          <option key={o} value={String(o)}>
-            {o} px
-          </option>
-        ))}
-      </select>
-      <ChevronDown aria-hidden />
-    </div>
   );
 }

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import indexHtml from "@/../index.html?raw";
 import { CACHE_KEY, STYLE_ID } from "./appearance";
 import { contrast, over } from "./color";
+import { fontsCss } from "./fonts";
+import { defaultSettings } from "./model";
 import { paletteCss, palettes, resolvePalette, type Palette } from "./palette";
 import { themes } from "./themes";
 
@@ -80,7 +82,7 @@ describe("resolvePalette", () => {
 
 describe("stylesheets", () => {
   const sheets = import.meta.glob<string>("/src/**/*.css", { query: "?raw", import: "default", eager: true });
-  const palette = Object.keys(declarations(paletteCss(palettes.l1code.dark)));
+  const painted = Object.keys(declarations(paletteCss(palettes.l1code.dark) + fontsCss(defaultSettings)));
 
   it("load as text", () => {
     expect(Object.keys(sheets).length).toBeGreaterThan(5);
@@ -95,9 +97,9 @@ describe("stylesheets", () => {
     }
   });
 
-  it("read only variables that the palette or a stylesheet declares", () => {
+  it("read only variables that the runtime paints or a stylesheet declares", () => {
     const all = Object.values(sheets).join("\n");
-    const declared = new Set([...palette, ...[...all.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1])]);
+    const declared = new Set([...painted, ...[...all.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1])]);
     const read = new Set([...all.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]));
     expect([...read].filter((v) => !declared.has(v))).toEqual([]);
   });
