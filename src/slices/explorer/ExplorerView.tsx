@@ -65,7 +65,8 @@ export default function ExplorerView() {
             ref={input}
             className="input"
             value={filter}
-            placeholder="Filter files"
+            placeholder="Search"
+            aria-label="Search files"
             onChange={(e) => setFilter(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -79,16 +80,16 @@ export default function ExplorerView() {
             }}
           />
           {filter && (
-            <button className="icon-btn" title="Clear filter" onClick={() => setFilter("")}>
+            <button className="icon-btn" title="Clear search" aria-label="Clear search" onClick={() => setFilter("")}>
               <X />
             </button>
           )}
         </div>
-        <button className="icon-btn" title="New File" onClick={() => startCreate(null, false)}>
-          <FilePlus />
-        </button>
-        <button className="icon-btn" title="New Folder" onClick={() => startCreate(null, true)}>
+        <button className="icon-btn" title="Add folder" aria-label="Add folder" onClick={() => startCreate(null, true)}>
           <FolderPlus />
+        </button>
+        <button className="icon-btn" title="Add file" aria-label="Add file" onClick={() => startCreate(null, false)}>
+          <FilePlus />
         </button>
       </div>
       <div className="explorer-tree">

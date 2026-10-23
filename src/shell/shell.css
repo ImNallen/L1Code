@@ -73,7 +73,7 @@ kbd {
   position: relative;
 }
 .column-main.inset-left {
-  --inset-left: 104px;
+  --inset-left: 120px;
 }
 .column-main.inset-right {
   --inset-right: 36px;
@@ -84,7 +84,7 @@ kbd {
   z-index: 6;
 }
 .column-main > .column-toggle.left {
-  left: 76px;
+  left: 92px;
 }
 .column-main > .column-toggle.right {
   right: 6px;
@@ -99,12 +99,12 @@ kbd {
   padding: 0 6px;
 }
 .side-top.traffic-lights {
-  padding-left: 76px;
+  padding-left: 92px;
 }
 .side-title {
   flex: 1;
   min-width: 0;
-  padding-left: 4px;
+  padding-left: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
