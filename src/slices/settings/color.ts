@@ -44,6 +44,14 @@ export function hex([L, A, B]: Lab, alpha = 1): Hex {
   return `#${bytes.map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, "0")).join("")}`;
 }
 
+/** A `#rrggbbaa` color painted over an opaque one, as the browser blends it. */
+export function over(top: Hex, under: Hex): Hex {
+  const a = parseInt(top.slice(7, 9) || "ff", 16) / 255;
+  const below = channels(under);
+  const bytes = channels(top).map((c, i) => Math.round((c * a + below[i]! * (1 - a)) * 255));
+  return `#${bytes.map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+}
+
 /** WCAG 2 contrast ratio of two opaque colors. */
 export function contrast(a: Hex, b: Hex): number {
   const y = (h: Hex) => {
@@ -52,6 +60,23 @@ export function contrast(a: Hex, b: Hex): number {
   };
   const [hi, lo] = [y(a), y(b)].sort((x, z) => z - x) as [number, number];
   return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * `c` with its OKLab lightness moved toward `target`'s by the least amount that reaches `floor` contrast on every
+ * background, hue and chroma kept. `c` itself when it already passes.
+ */
+export function legible(c: Lab, target: Lab, backgrounds: readonly Hex[], floor: number): Lab {
+  const at = (t: number): Lab => [c[0] + (target[0] - c[0]) * t, c[1], c[2]];
+  const passes = (t: number) => backgrounds.every((bg) => contrast(hex(at(t)), bg) >= floor);
+  if (passes(0)) return c;
+  let [lo, hi] = [0, 1];
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (passes(mid)) hi = mid;
+    else lo = mid;
+  }
+  return at(hi);
 }
 
 export const WHITE = lab("#ffffff");

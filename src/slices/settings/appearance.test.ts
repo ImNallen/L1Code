@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import indexHtml from "@/../index.html?raw";
 import { CACHE_KEY, STYLE_ID } from "./appearance";
-import { contrast } from "./color";
+import { contrast, over } from "./color";
 import { paletteCss, palettes, resolvePalette, type Palette } from "./palette";
 import { themes } from "./themes";
 
@@ -51,6 +51,11 @@ describe.each(all.map((p) => [`${p.id} ${p.scheme}`, p] as const))("%s keeps tex
   ] as const)("%s on the canvas and the side panels", (_, color, floor) => {
     expect(contrast(color, ui.bg)).toBeGreaterThanOrEqual(floor);
     expect(contrast(color, ui.bgPanel)).toBeGreaterThanOrEqual(floor);
+  });
+
+  it("accent text on every surface it sits on", () => {
+    for (const bg of [ui.bg, ui.bgPanel, ui.bgElev, ui.bgSelected]) expect(contrast(ui.accent, bg), bg).toBeGreaterThanOrEqual(3);
+    for (const bg of [ui.bg, ui.bgPanel]) expect(contrast(ui.accent, over(ui.accentBg, bg)), bg).toBeGreaterThanOrEqual(3);
   });
 
   it("text on primary buttons and on accent fills", () => {
